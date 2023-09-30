@@ -1,9 +1,9 @@
 {
   "dependencies": {
     "com.madsbangh.easybuttons": {
-      "version": "file:EasyButtons",
+      "version": "file:./../../Common/EasyButtons",
       "depth": 0,
-      "source": "embedded",
+      "source": "local",
       "dependencies": {}
     },
     "com.unity.collab-proxy": {
@@ -160,6 +160,12 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.cn"
+    },
+    "com.yasirkula.ingamedebugconsole": {
+      "version": "file:./../../Common/UnityIngameDebugConsole",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
     },
     "com.zframework.commoncode": {
       "version": "file:./../../Common/MessageModel",

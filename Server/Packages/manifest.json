@@ -11,6 +11,8 @@
     "com.unity.ugui": "1.0.0",
     "com.unity.visualscripting": "1.7.8",
     "com.zframework.commoncode": "file:./../../Common/MessageModel",
+    "com.madsbangh.easybuttons": "file:./../../Common/EasyButtons",
+    "com.yasirkula.ingamedebugconsole": "file:./../../Common/UnityIngameDebugConsole",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.animation": "1.0.0",
