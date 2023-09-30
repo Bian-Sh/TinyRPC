@@ -1,0 +1,16 @@
+{
+    "name": "com.zframework.tinyrpc.runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:813fb4f000f3c8e4db5a297a2835424f"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,17 @@
+{
+    "name": "com.zframework.tinyrpc.generated",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c5a44f231aee9ef4895a10427e883834",
+        "GUID:813fb4f000f3c8e4db5a297a2835424f"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
