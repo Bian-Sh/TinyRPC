@@ -1,21 +1,45 @@
 using EasyButtons;
-using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC;
 using zFramework.TinyRPC.DataModel;
-
+[MessageHandlerProvider]
 public class Test : MonoBehaviour
 {
+    TinyClient client;
+    TCPServer server;
+    private void Start()
+    {
+        int port = 8899;
+        server = new TCPServer(port);
+        server.OnClientEstablished += Server_OnClientEstablished;
+        server.Start();
+        client = new TinyClient("localhost", port);
+        client.Start();
+        Debug.Log($"{nameof(Test)}: finish init server and client");
+    }
 
-    private void OnEnable()
+    private void Server_OnClientEstablished(Session obj)
     {
-        this.AddMessageHandler();
+        Debug.Log($"{nameof(Test)}: Client Connected {obj}");
     }
-    private void OnDisable()
+
+    private void OnApplicationQuit()
     {
-        this.RemoveMessageHandler();
+        server.Stop();
+        client.Stop();
     }
+
+    [Button]
+    public async void TestRPC()
+    {
+        var request = new TestRPCRequest();
+        request.name = "request啊";
+        Debug.Log($"{nameof(Test)}:  client is null {client == null} request is null ={request == null}");
+        var response = await client.Call<TestRPCResponse>(request);
+        Debug.Log($"{nameof(Test)}: {response.name} ");
+    }
+
 
 
     [Button]
@@ -40,19 +64,26 @@ public class Test : MonoBehaviour
         Debug.Log($"{nameof(Test)}: {rsp2.name}  ");
     }
 
-    [MessageHandler(MessageType.Normal)]
-    private void MessageHandler(Session session, TestClass message)
+    [Button("Test Regist message handler")]
+    public void Test3()
     {
+        MessageManager.StoreRPCMessagePairs();
+        //MessageManager.RegisterAllHandlers();
+    }
 
+
+    [MessageHandler(MessageType.Normal)]
+    private static void MessageHandler(Session session, TestClass message)
+    {
 
     }
 
     [MessageHandler(MessageType.RPC)]
-    private async void RPCMessageHandler(Session session,TestRPCRequest request, TestRPCResponse response)
+    private static async void RPCMessageHandler(Session session, TestRPCRequest request, TestRPCResponse response)
     {
         await Task.Yield();
+        response.name = "response啊xx";
     }
-
 
 
 
