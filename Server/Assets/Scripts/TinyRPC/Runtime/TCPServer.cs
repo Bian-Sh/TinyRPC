@@ -45,18 +45,18 @@ namespace zFramework.TinyRPC
         {
             listener.Start();
             source = new CancellationTokenSource();
-            Task.Run(() => AcceptAsync(source.Token));
+            Task.Run(() => AcceptAsync(source));
             // Send Ping Message
            // Task.Run(Ping);
         }
         public void Stop()
         {
-            timer.Dispose();
-            source.Cancel();
-            listener.Stop();
+            timer?.Dispose();
+            source?.Cancel();
+            listener?.Stop();
             foreach (var session in sessions)
             {
-                session.Close();
+                session?.Close();
             }
             sessions.Clear();
             OnServerClosed?.Invoke("服务器已关闭");
@@ -87,7 +87,7 @@ namespace zFramework.TinyRPC
             }, null, TimeSpan.FromSeconds(pingInterval), TimeSpan.FromSeconds(pingInterval));
         }
 
-        private async void AcceptAsync(CancellationToken token)
+        private async void AcceptAsync(CancellationTokenSource token)
         {
             while (!token.IsCancellationRequested)
             {
@@ -99,7 +99,7 @@ namespace zFramework.TinyRPC
                     OnClientEstablished?.Invoke(session);
                     try
                     {
-                        _ = Task.Run(session.ReceiveAsync);
+                       _ = Task.Run(session.ReceiveAsync);
                     }
                     catch (Exception e)
                     {

@@ -20,7 +20,7 @@ namespace zFramework.TinyRPC
 
         public void Start()
         {
-            client = new TcpClient(ip, port);
+            client = new TcpClient();
             source = new CancellationTokenSource();
             context = SynchronizationContext.Current;
             // alert must in main thread, otherwise throw exception
@@ -28,10 +28,10 @@ namespace zFramework.TinyRPC
             {
                 throw new Exception("TinyClient.Start must be called in main thread!");
             }
-            Task.Run(() => ReceiveAsync(source.Token));
+            Task.Run(() => ReceiveAsync(source));
         }
 
-        private async void ReceiveAsync(CancellationToken token)
+        private async void ReceiveAsync(CancellationTokenSource token)
         {
 
             Debug.Log($"{nameof(TinyClient)}: connected to server before a");
