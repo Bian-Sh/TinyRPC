@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.madsbangh.easybuttons": "file:./../../Common/EasyButtons",
     "com.unity.collab-proxy": "1.17.2",
     "com.unity.feature.development": "1.0.1",
     "com.unity.ide.rider": "3.0.15",
@@ -10,9 +11,8 @@
     "com.unity.timeline": "1.6.4",
     "com.unity.ugui": "1.0.0",
     "com.unity.visualscripting": "1.7.8",
-    "com.zframework.commoncode": "file:./../../Common/MessageModel",
-    "com.madsbangh.easybuttons": "file:./../../Common/EasyButtons",
     "com.yasirkula.ingamedebugconsole": "file:./../../Common/UnityIngameDebugConsole",
+    "com.zframework.tinyrpc": "file:./../../Common/TinyRPC",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.animation": "1.0.0",

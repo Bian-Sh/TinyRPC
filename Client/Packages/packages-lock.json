@@ -167,8 +167,8 @@
       "source": "local",
       "dependencies": {}
     },
-    "com.zframework.commoncode": {
-      "version": "file:./../../Common/MessageModel",
+    "com.zframework.tinyrpc": {
+      "version": "file:./../../Common/TinyRPC",
       "depth": 0,
       "source": "local",
       "dependencies": {}
