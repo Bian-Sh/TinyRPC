@@ -7,7 +7,6 @@ using UnityEngine;
 using zFramework.TinyRPC.DataModel;
 using static zFramework.TinyRPC.MessageManager;
 
-
 namespace zFramework.TinyRPC
 {
     public class Session
@@ -69,7 +68,9 @@ namespace zFramework.TinyRPC
             };
             //写入 request id, id 永远自增 1
             request.id = Interlocked.Increment(ref id);
-            var bytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(wrapper));
+            var json = JsonUtility.ToJson(wrapper);
+            Debug.Log($"{nameof(Session)}: Call {json}");
+            var bytes = Encoding.UTF8.GetBytes(json);
             Send(MessageType.RPC, bytes);
 
             try
@@ -91,11 +92,9 @@ namespace zFramework.TinyRPC
 
         public async void ReceiveAsync()
         {
-            Debug.Log($"{nameof(Session)}: start receive");
             var stream = client.GetStream();
             while (!source.IsCancellationRequested)
             {
-                Debug.Log($"{nameof(Session)}: start receive inside");
                 // 读出消息的长度
                 var head = new byte[4];
                 var byteReaded = await stream.ReadAsync(head, 0, head.Length, source.Token);
@@ -106,10 +105,13 @@ namespace zFramework.TinyRPC
                 // 读出消息的内容
                 var bodySize = BitConverter.ToInt32(head, 0);
                 var body = new byte[bodySize];
-
+                byteReaded = 0;
+                // 当读取到 body size 后的数据读取需要加入超时检测
+                var cts = new CancellationTokenSource();
+                cts.CancelAfter(TimeSpan.FromSeconds(20));
                 while (byteReaded < bodySize)
                 {
-                    var readed = await stream.ReadAsync(body, 0, body.Length, source.Token);
+                    var readed = await stream.ReadAsync(body, byteReaded, body.Length - byteReaded, cts.Token);
                     // 读着读着就断线了的情况，如果不处理，此处会产生死循环
                     if (readed == 0)
                     {
@@ -124,6 +126,7 @@ namespace zFramework.TinyRPC
                 // 解析消息类型
                 var type = body[0];
                 var content = new byte[body.Length - 1];
+                Array.Copy(body, 1, content, 0, content.Length);
                 OnMessageReceived(type, content);
             }
         }
@@ -141,6 +144,7 @@ namespace zFramework.TinyRPC
                     {
                         //normal message
                         var json = Encoding.UTF8.GetString(content);
+                        Debug.Log($"{nameof(Session)}: Normal message {json}");
                         var wrapper = JsonUtility.FromJson<MessageWrapper>(json);
                         context.Post(_ => HandleNormalMessage(this, wrapper.Message), null);
                     }
@@ -153,10 +157,12 @@ namespace zFramework.TinyRPC
                         // rpc 消息有2个分支：response 、request
                         if (wrapper.Message is Request) //如果是请求就直接发消息回去即可，否则就是响应
                         {
+                            Debug.Log($"{nameof(Session)}: Request message {json}");
                             context.Post(_ => HandleRpcRequest(this, wrapper.Message as Request), null);
                         }
                         else if (wrapper.Message is Response) //如果是响应就找到对应的 task 并设置 task.SetResult
                         {
+                            Debug.Log($"{nameof(Session)}: Response message {json}");
                             context.Post(_ => HandleRpcResponse(this, wrapper.Message as Response), null);
                         }
                     }

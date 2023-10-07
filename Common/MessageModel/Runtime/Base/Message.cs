@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace zFramework.TinyRPC.DataModel
 {
@@ -8,6 +9,10 @@ namespace zFramework.TinyRPC.DataModel
         /// <summary>
         /// 消息 id , 系统中自增，用于 rpc 消息身份识别
         /// </summary>
-        public int id; 
+        public int id;
+        public override string ToString()
+        {
+            return JsonUtility.ToJson(this);
+        }
     }
 }

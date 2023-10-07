@@ -47,7 +47,7 @@ namespace zFramework.TinyRPC
             source = new CancellationTokenSource();
             Task.Run(() => AcceptAsync(source));
             // Send Ping Message
-           // Task.Run(Ping);
+            Task.Run(Ping);
         }
         public void Stop()
         {

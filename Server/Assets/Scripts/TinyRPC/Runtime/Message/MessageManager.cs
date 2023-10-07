@@ -166,7 +166,7 @@ namespace zFramework.TinyRPC
             }
         }
 
-        internal static void HandleRpcRequest(Session session, Request request)
+        internal static async void HandleRpcRequest(Session session, Request request)
         {
             if (rpcHandlers.TryGetValue(request.GetType(), out var info))
             {
@@ -174,7 +174,10 @@ namespace zFramework.TinyRPC
                 {
                     var response = Activator.CreateInstance(responseType) as Response;
                     response.id = request.id;
-                    info.method.Invoke(null, new object[] { session, request, response });
+                    Debug.Log($"{nameof(MessageManager)}:  1111");
+                    var task = info.method.Invoke(null, new object[] { session, request, response });
+                    await (task as Task);
+                    Debug.Log($"{nameof(MessageManager)}:  4444");
                     session.Reply(response);
                     return;
                 }
@@ -221,8 +224,36 @@ namespace zFramework.TinyRPC
             return type;
         }
 
+        //todo: Normal Message 与 RPC Message 的处理器注册机制不一样，需要分开处理
+        // Normal Message 的处理器注册机制：
+        // 使用 AddSignal<T>(OnXXXXMessageReceived) 添加消息处理器，T 为消息类型
+        // 使用 RemoveSignal<T>(OnXXXXMessageReceived) 移除消息处理器，T 为消息类型
+        // Normal 消息，必须有2个参数，第一个参数为 Session，第二个参数为 Message 
+        // 示例如下：
+        /*
+         MessageManager.AddSignal<TestClass>(OnTestClassMessageReceived);
+         private static void OnTestClassMessageReceived(Session session, TestClass message)
+         {
+             Debug.Log($"{nameof(MessageManager)}: 收到 {session} message {message}");
+         }
+         */
 
-
+        //todo ：加入 message id 机制, 用于快速获取消息Type,方便调试
+        // 我需要写一些代码分析器，实现以下功能：
+        // 约定：MessageHandlerAttribute 的出现触发代码分析器
+        //
+        // 关于 IL 代码注入：
+        //1. 取消 MessageHandlerAttribute 的使用，改为自动注册，但要求 il 代码注入
+        // 2. 使用 IL 代码注入，自动为包含了 MessageHandler 的 Type 生成静态构造函数（如果有则插入逻辑），用于注册 MessageHandler
+        // 3. 如果用户删除了 MessageHandlerAttribute，自动删除静态构造函数
+        // 4. 如果用户自己写了静态构造函数，不要自动删除，但剔除 MessageHandlerAttribute 的注册逻辑
+        //
+        // 关于撰写 Server 端 handler是否符合规范：
+        // 0. 不管是 Normal 消息还是 RPC 消息，必须是静态方法且 RPC 消息返回值必须是 Task
+        // 1. 如果是 RPC 消息，必须有3个参数，第一个参数为 Session，第二个参数为 Request，第三个参数为 Response
+        // 2. 如果是 Normal 消息，必须有2个参数，第一个参数为 Session，第二个参数为 Message
+        // 3.  RPC Hanlder 理应在客户端上也能实现，进而实现 Server call Client 
+        // 4.  RPC Handler 的 Request 需要上报 RPC Server（可能是客户端）没有实现 Handler 的情况
 
         class NormalHandlerInfo : BaseHandlerInfo
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using UnityEngine;
 namespace zFramework.TinyRPC.DataModel
 {
@@ -17,7 +18,8 @@ namespace zFramework.TinyRPC.DataModel
 
         public void OnAfterDeserialize()
         {
-            Type t = Type.GetType(type);
+            var asm = Assembly.Load("com.zframework.tinyrpc.generated");
+            Type t = asm.GetType(type);
             Message = (Message)JsonUtility.FromJson(data, t);
         }
     }

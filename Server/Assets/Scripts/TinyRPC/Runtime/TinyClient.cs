@@ -34,9 +34,7 @@ namespace zFramework.TinyRPC
         private async void ReceiveAsync(CancellationTokenSource token)
         {
 
-            Debug.Log($"{nameof(TinyClient)}: connected to server before a");
             await client.ConnectAsync(ip, port);
-            Debug.Log($"{nameof(TinyClient)}: connected to server before");
             if (token.IsCancellationRequested) return;
             Debug.Log($"{nameof(TinyClient)}: connected to server");
             Session = new Session(client, context, false);

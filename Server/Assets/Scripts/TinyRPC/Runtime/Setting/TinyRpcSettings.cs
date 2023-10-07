@@ -2,6 +2,10 @@ using UnityEditor;
 using UnityEngine;
 namespace zFramework.TinyRPC.Settings
 {
+    //todo：过滤 log 的 message
+    //todo：选择 message 自动生成 messagehandler 方便用户使用
+    //todo：绘制 assembly name 为 Assembly Asset ，方便定位，默认的 Assembly-CSharp 搞成只读
+
     public class TinyRpcSettings : ScriptableObject
     {
         //specific from which assembly you can collect handlers
