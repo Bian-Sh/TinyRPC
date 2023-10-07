@@ -21,9 +21,10 @@ namespace zFramework.TinyRPC
             this.client = client;
             this.source = new CancellationTokenSource();
             this.context = context;
+            this.lastPingReceiveTime = DateTime.Now; //避免第一次 ping 时显示 0 且异常断线
         }
 
-        public void Send(MessageType type, byte[] content)
+        private void Send(MessageType type, byte[] content)
         {
             var stream = client.GetStream();
             var body = new byte[content.Length + 1];
@@ -133,27 +134,27 @@ namespace zFramework.TinyRPC
 
         private void OnMessageReceived(byte type, byte[] content)
         {
+            var json = Encoding.UTF8.GetString(content);
+            Debug.Log($"{nameof(Session)}:  收到网络消息 {(IsServerSide ? "Server" : "Client")} {json}");
+            var wrapper = JsonUtility.FromJson<MessageWrapper>(json);
             switch (type)
             {
-                case 0:
-                    // ping 
-                    // 服务器收到客户端的 ping 消息，更新 lastPingReceiveTime
+                case 0: // ping 
                     lastPingReceiveTime = DateTime.Now;
-                    break;
-                case 1:
+                    if (!IsServerSide)
                     {
-                        //normal message
-                        var json = Encoding.UTF8.GetString(content);
-                        Debug.Log($"{nameof(Session)}: Normal message {json}");
-                        var wrapper = JsonUtility.FromJson<MessageWrapper>(json);
+                        var ping = wrapper.Message as Ping;
+                        lastPingSendTime = ping.svrTime;
+                        Send(ping); // 直接把 ping 原封不动发回去
+                    }
+                    break;
+                case 1: //normal message
+                    {
                         context.Post(_ => HandleNormalMessage(this, wrapper.Message), null);
                     }
                     break;
-                case 2:
+                case 2: // rpc message
                     {
-                        // rpc message
-                        var json = Encoding.UTF8.GetString(content);
-                        var wrapper = JsonUtility.FromJson<MessageWrapper>(json);
                         // rpc 消息有2个分支：response 、request
                         if (wrapper.Message is Request) //如果是请求就直接发消息回去即可，否则就是响应
                         {

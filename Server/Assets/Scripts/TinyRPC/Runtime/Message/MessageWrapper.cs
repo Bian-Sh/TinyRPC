@@ -18,7 +18,8 @@ namespace zFramework.TinyRPC.DataModel
 
         public void OnAfterDeserialize()
         {
-            var asm = Assembly.Load("com.zframework.tinyrpc.generated");
+            var asmname = type == "Ping" ? "com.zframework.tinyrpc.runtime" : "com.zframework.tinyrpc.generated";
+            var asm = Assembly.Load(asmname);
             Type t = asm.GetType(type);
             Message = (Message)JsonUtility.FromJson(data, t);
         }

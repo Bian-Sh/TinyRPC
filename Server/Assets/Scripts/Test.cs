@@ -14,10 +14,16 @@ public class Test : MonoBehaviour
         int port = 8899;
         server = new TCPServer(port);
         server.OnClientEstablished += Server_OnClientEstablished;
+        server.OnClientDisconnected += Server_OnClientDisconnected;
         server.Start();
         client = new TinyClient("localhost", port);
         client.Start();
         Debug.Log($"{nameof(Test)}: finish init server and client");
+    }
+
+    private void Server_OnClientDisconnected(Session obj)
+    {
+        Debug.Log($"{nameof(Test)}: Client Disconnected {obj}");
     }
 
     private void Server_OnClientEstablished(Session obj)

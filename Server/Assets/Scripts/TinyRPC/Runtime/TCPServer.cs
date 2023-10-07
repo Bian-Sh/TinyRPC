@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -47,7 +46,7 @@ namespace zFramework.TinyRPC
             source = new CancellationTokenSource();
             Task.Run(() => AcceptAsync(source));
             // Send Ping Message
-            Task.Run(Ping);
+            //Task.Run(Ping); // todo ping 逻辑有问题，暂时不用，后续再优化
         }
         public void Stop()
         {
@@ -65,13 +64,14 @@ namespace zFramework.TinyRPC
         {
             timer = new(_ =>
             {
+                Debug.Log($"{nameof(TCPServer)}: inside ping");
+                var toRemove = new List<Session>();
                 foreach (var session in sessions)
                 {
+                    Debug.Log($"{nameof(TCPServer)}:  ping session {session}");
                     if (DateTime.Now - session.lastPingReceiveTime > TimeSpan.FromSeconds(pingTimeout))
                     {
-                        session.Close();
-                        sessions.Remove(session);
-                        OnClientDisconnected?.Invoke(session);
+                        toRemove.Add(session);
                     }
                     else
                     {
@@ -79,10 +79,20 @@ namespace zFramework.TinyRPC
                         {
                             svrTime = DateTime.Now
                         };
-                        var bytes = SerializeHelper.Serialize(ping);
                         session.lastPingSendTime = DateTime.Now;
-                        session.Send(MessageType.Ping, bytes);
+                        lock (session)
+                        {
+                            Send(session, ping);
+                        }
+                        Debug.Log($"{nameof(TCPServer)}: Send Ping from server {session} - {ping}");
                     }
+                }
+                foreach (var session in toRemove)
+                {
+                    Debug.Log($"{nameof(TCPServer)}: Session  {session} is timeout ");
+                    session.Close();
+                    sessions.Remove(session);
+                    OnClientDisconnected?.Invoke(session);
                 }
             }, null, TimeSpan.FromSeconds(pingInterval), TimeSpan.FromSeconds(pingInterval));
         }
@@ -99,7 +109,7 @@ namespace zFramework.TinyRPC
                     OnClientEstablished?.Invoke(session);
                     try
                     {
-                       _ = Task.Run(session.ReceiveAsync);
+                        _ = Task.Run(session.ReceiveAsync);
                     }
                     catch (Exception e)
                     {
@@ -116,19 +126,26 @@ namespace zFramework.TinyRPC
             }
         }
 
-
-        public void Boardcast(MessageType type, byte[] content)
-        {
-            foreach (var session in sessions)
-            {
-                session.Send(type, content);
-            }
-        }
         public void Boardcast(Message message)
         {
             foreach (var session in sessions)
             {
+                Send(session, message);
+            }
+        }
+
+        public void Send(Session session, Message message)
+        {
+            try
+            {
                 session.Send(message);
+            }
+            catch (Exception)
+            {
+                //如果消息发送失败，说明客户端已经断开连接，需要移除
+                session.Close();
+                sessions.Remove(session);
+                OnClientDisconnected?.Invoke(session);
             }
         }
     }
