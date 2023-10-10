@@ -12,17 +12,17 @@ public class TestServer : MonoBehaviour
         server.OnClientEstablished += Server_OnClientEstablished;
         server.OnClientDisconnected += Server_OnClientDisconnected;
         server.Start();
-        Debug.Log($"{nameof(Test)}:  server started ！！！");
+        Debug.Log($"{nameof(TestServer)}:  server started ！！！");
     }
 
     private void Server_OnClientDisconnected(Session obj)
     {
-        Debug.Log($"{nameof(Test)}: Client Disconnected {obj}");
+        Debug.Log($"{nameof(TestServer)}: Client Disconnected {obj}");
     }
 
     private void Server_OnClientEstablished(Session obj)
     {
-        Debug.Log($"{nameof(Test)}: Client Connected {obj}");
+        Debug.Log($"{nameof(TestServer)}: Client Connected {obj}");
     }
 
     private void OnApplicationQuit()
@@ -40,7 +40,7 @@ public class TestServer : MonoBehaviour
     [MessageHandler(MessageType.RPC)]
     private static async Task RPCMessageHandler(Session session, TestRPCRequest request, TestRPCResponse response)
     {
-        Debug.Log($"{nameof(Test)}: Receive {session} request {request}");
+        Debug.Log($"{nameof(TestServer)}: Receive {session} request {request}");
         await Task.Delay(1000);
         response.name = "response after rpc";
     }
