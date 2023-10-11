@@ -50,13 +50,15 @@ namespace zFramework.TinyRPC
         }
         public void Stop()
         {
-            timer?.Dispose();
-            source?.Cancel();
-            listener?.Stop();
+            //停服前先断开 Session
             foreach (var session in sessions)
             {
                 session?.Close();
             }
+
+            timer?.Dispose();
+            source?.Cancel();
+            listener?.Stop();
             sessions.Clear();
             OnServerClosed?.Invoke("服务器已关闭");
         }

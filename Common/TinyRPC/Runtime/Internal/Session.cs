@@ -171,7 +171,7 @@ namespace zFramework.TinyRPC
         }
 
         public override string ToString() => $"Session: {client.Client.RemoteEndPoint} Ping: {Ping} IsServer:{IsServerSide}";
-        public void Close() => client.Close();
+        public void Close() => client?.Close();
         private readonly TcpClient client;
         private readonly CancellationTokenSource source;
         private readonly SynchronizationContext context;
