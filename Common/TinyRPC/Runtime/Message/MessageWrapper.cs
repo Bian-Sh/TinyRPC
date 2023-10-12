@@ -9,7 +9,7 @@ namespace zFramework.TinyRPC.DataModel
     {
         public string type;
         public string data;
-        public Message Message { get; set; }
+        public IMessage Message { get; set; }
         public void OnBeforeSerialize()
         {
             type = Message.GetType().FullName;
@@ -18,10 +18,10 @@ namespace zFramework.TinyRPC.DataModel
 
         public void OnAfterDeserialize()
         {
-            var asmname = type == "Ping" ? "com.zframework.tinyrpc.runtime" : "com.zframework.tinyrpc.generated";
+            var asmname = type == "zFramework.TinyRPC.Ping" ? "com.zframework.tinyrpc.runtime" : "com.zframework.tinyrpc.generated";
             var asm = Assembly.Load(asmname);
             Type t = asm.GetType(type);
-            Message = (Message)JsonUtility.FromJson(data, t);
+            Message = (IMessage)JsonUtility.FromJson(data, t);
         }
     }
 }

@@ -1,18 +1,19 @@
+using System.Net;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC;
 [MessageHandlerProvider]
 public class TestServer : MonoBehaviour
 {
+    public int port = 8889;
     TCPServer server;
     private void Start()
     {
-        int port = 8899;
         server = new TCPServer(port);
         server.OnClientEstablished += Server_OnClientEstablished;
         server.OnClientDisconnected += Server_OnClientDisconnected;
         server.Start();
-        Debug.Log($"{nameof(TestServer)}:  server started ！！！");
+        Debug.Log($"{nameof(TestServer)}:  server started on port = {port} ！！！");
     }
 
     private void Server_OnClientDisconnected(Session obj)

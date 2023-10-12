@@ -5,7 +5,7 @@ namespace zFramework.TinyRPC
 {
     public static class SerializeHelper
     {
-        internal static byte[] Serialize<T>(T message) where T : Message
+        internal static byte[] Serialize<T>(T message) where T : IMessage
         {
             // 将消息包装
             var wrapper = new MessageWrapper

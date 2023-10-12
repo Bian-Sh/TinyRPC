@@ -9,19 +9,21 @@ using static zFramework.TinyRPC.MessageManager;
 
 namespace zFramework.TinyRPC
 {
-    public class Session
+    public class Session : IDisposable
     {
         public bool IsServerSide { get; }
+        public bool IsAlive { get; private set; } 
+
+        // 服务端用于断言Session是否消亡
         public DateTime lastPingSendTime;
         public DateTime lastPingReceiveTime;
-        public float Ping => Mathf.Clamp((float)(lastPingReceiveTime - lastPingSendTime).TotalMilliseconds, 0, 999);
         public Session(TcpClient client, SynchronizationContext context, bool isServerSide)
         {
             IsServerSide = isServerSide;
             this.client = client;
             this.source = new CancellationTokenSource();
             this.context = context;
-            this.lastPingReceiveTime = DateTime.Now; //避免第一次 ping 时显示 0 且异常断线
+            IsAlive = true;
         }
 
         private void Send(MessageType type, byte[] content)
@@ -35,7 +37,7 @@ namespace zFramework.TinyRPC
             stream.Write(body, 0, body.Length);
         }
 
-        public void Send(Message message)
+        public void Send(IMessage message)
         {
             var wrapper = new MessageWrapper()
             {
@@ -44,18 +46,19 @@ namespace zFramework.TinyRPC
             var bytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(wrapper));
             var messageType = message switch
             {
-                Request => MessageType.RPC,
-                Response => MessageType.RPC,
-                TinyRPC.Ping => MessageType.Ping,
+                IRequest => MessageType.RPC,
+                IResponse => MessageType.RPC,
+                // 其他的均为常规消息
+                // otherwise you get a normal message
                 _ => MessageType.Normal
             };
             Send(messageType, bytes);
         }
 
-        public void Reply(Message message) => Send(message);
+        public void Reply(IMessage message) => Send(message);
 
         // 写注释，特别强调2组Exception: 
-        public async Task<T> Call<T>(Request request) where T : Response, new()
+        public async Task<T> Call<T>(IRequest request) where T : class, IResponse, new()
         {
             // 校验 RPC 消息匹配
             var type = GetResponseType(request);
@@ -63,23 +66,23 @@ namespace zFramework.TinyRPC
             {
                 throw new Exception($"RPC Response 消息类型不匹配, 期望值： {type},传入值 {typeof(T)}");
             }
-            var wrapper = new MessageWrapper()
+            // 原子操作，保证 id 永远自增 1且不会溢出
+            if (Interlocked.CompareExchange(ref id, int.MinValue, int.MaxValue) == int.MaxValue)
             {
-                Message = request
-            };
+                Interlocked.Increment(ref id);
+            }
             //写入 request id, id 永远自增 1
-            request.id = Interlocked.Increment(ref id);
-            var json = JsonUtility.ToJson(wrapper);
-            Debug.Log($"{nameof(Session)}: Call {json}");
-            var bytes = Encoding.UTF8.GetBytes(json);
-            Send(MessageType.RPC, bytes);
+            request.Id = id;
+
+            var bytes = SerializeHelper.Serialize(request);
+            Send(MessageType.RPC, bytes);  // try what? dispose?
 
             try
             {
                 var response = await AddRpcTask(request);
-                if (!string.IsNullOrEmpty(response.error))// 如果服务器告知了错误！
+                if (!string.IsNullOrEmpty(response.Error))// 如果服务器告知了错误！
                 {
-                    throw new RpcException($"Rpc Handler Error :{response.error}");
+                    throw new RpcException($"Rpc Handler Error :{response.Error}");
                 }
                 return response as T;
             }
@@ -134,34 +137,26 @@ namespace zFramework.TinyRPC
 
         private void OnMessageReceived(byte type, byte[] content)
         {
+            lastPingReceiveTime = DateTime.Now;
             var json = Encoding.UTF8.GetString(content);
             Debug.Log($"{nameof(Session)}:  收到网络消息 {(IsServerSide ? "Server" : "Client")} {json}");
             var wrapper = JsonUtility.FromJson<MessageWrapper>(json);
             switch (type)
             {
-                case 0: // ping 
-                    lastPingReceiveTime = DateTime.Now;
-                    if (!IsServerSide)
-                    {
-                        var ping = wrapper.Message as Ping;
-                        lastPingSendTime = ping.svrTime;
-                        Send(ping); // 直接把 ping 原封不动发回去
-                    }
-                    break;
-                case 1: //normal message
+                case 0: //normal message
                     {
                         context.Post(_ => HandleNormalMessage(this, wrapper.Message), null);
                     }
                     break;
-                case 2: // rpc message
+                case 1: // rpc message
                     {
-                        if (wrapper.Message is Request) 
+                        if (wrapper.Message is Request || (wrapper.Message is Ping && IsServerSide))
                         {
-                            context.Post(_ => HandleRpcRequest(this, wrapper.Message as Request), null);
+                            context.Post(_ => HandleRpcRequest(this, wrapper.Message as IRequest), null);
                         }
-                        else if (wrapper.Message is Response) 
+                        else if (wrapper.Message is Response || (wrapper.Message is Ping && !IsServerSide))
                         {
-                            context.Post(_ => HandleRpcResponse(this, wrapper.Message as Response), null);
+                            context.Post(_ => HandleRpcResponse(this, wrapper.Message as IResponse), null);
                         }
                     }
                     break;
@@ -170,8 +165,17 @@ namespace zFramework.TinyRPC
             }
         }
 
-        public override string ToString() => $"Session: {client.Client.RemoteEndPoint} Ping: {Ping} IsServer:{IsServerSide}";
+        public override string ToString() => $"Session: {client.Client.RemoteEndPoint}  IsServer:{IsServerSide}";
         public void Close() => client?.Close();
+
+        public void Dispose()
+        {
+            client?.Close();
+            client?.Dispose();
+            source?.Dispose();
+            IsAlive = false;
+        }
+
         private readonly TcpClient client;
         private readonly CancellationTokenSource source;
         private readonly SynchronizationContext context;

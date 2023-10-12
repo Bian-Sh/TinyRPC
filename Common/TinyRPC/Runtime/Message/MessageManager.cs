@@ -23,10 +23,16 @@ namespace zFramework.TinyRPC
 
         //通过反射获取所有的RPC消息映射
         // 约定消息必须存在于同一个叫做 ：com.zframework.tinyrpc.generate 程序集中
+        // 此程序集将根据 proto 文件描述的继承关系一键生成
+        // 计划将其放在 Packages 文件夹
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
-        static void Awake()
+        public static void Awake()
         {
             rpcInfoPairs.Clear();
+            normalHandlers.Clear();
+            rpcHandlers.Clear();
+            Debug.Log($"{nameof(MessageManager)}: awake ~");
+            // 如果不是双向 rpc ,应该需要一个 Enable Server 的宏，这样避免客户端获取 RPC Pairs
             StoreRPCMessagePairs();
             RegisterAllHandlers();
         }
@@ -34,7 +40,8 @@ namespace zFramework.TinyRPC
         public static void StoreRPCMessagePairs()
         {
             rpcMessagePairs.Clear();
-            // store all rpc message pairs
+            // add ping message internal
+            rpcMessagePairs.Add(typeof(Ping), typeof(Ping));
             var assembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(v => v.FullName.StartsWith("com.zframework.tinyrpc.generated"));
 
@@ -61,12 +68,17 @@ namespace zFramework.TinyRPC
             {
                 Debug.Log($"{nameof(MessageManager)}: 请保证 生成的网络消息在 “com.zframework.tinyrpc.generated” 程序集下");
             }
+            foreach (var item in rpcMessagePairs)
+            {
+                Debug.Log($"{nameof(MessageManager)}: RPC Pair Added , request = {item.Key.Name}, response = {item.Value.Name}");
+            }
         }
 
         public static void RegisterAllHandlers()
         {
-            normalHandlers.Clear();
-            rpcHandlers.Clear();
+
+            // store ping message handler internal
+            RegisterHandler(typeof(TCPServer));
 
             // store all message handlers
             var handlers = AppDomain.CurrentDomain.GetAssemblies()
@@ -76,6 +88,12 @@ namespace zFramework.TinyRPC
             foreach (var handler in handlers)
             {
                 RegisterHandler(handler);
+            }
+
+            Debug.Log($"{nameof(MessageManager)}:  rpc handles count = {rpcHandlers.Count()}");
+            foreach (var item in rpcHandlers)
+            {
+                Debug.Log($"{nameof(MessageManager)}:  for {item.Key.Name} - handler = {item.Value.method.Name}");
             }
         }
 
@@ -101,9 +119,6 @@ namespace zFramework.TinyRPC
                 var attr = method.GetCustomAttribute<MessageHandlerAttribute>();
                 switch (attr.type)
                 {
-                    case MessageType.Ping:
-                        Debug.LogError($"{nameof(MessageManager)}: Ping 为内置消息，不支持自定义 MessageHandler");
-                        continue;
                     case MessageType.Normal:
                         if (param.Length != 2
                             || (param.Length == 2 && param[0].ParameterType != typeof(Session) && !typeof(Message).IsAssignableFrom(param[1].ParameterType)))
@@ -158,7 +173,7 @@ namespace zFramework.TinyRPC
             }
         }
 
-        internal static void HandleNormalMessage(Session session, Message message)
+        internal static void HandleNormalMessage(Session session, IMessage message)
         {
             if (normalHandlers.TryGetValue(message.GetType(), out var info))
             {
@@ -166,14 +181,14 @@ namespace zFramework.TinyRPC
             }
         }
 
-        internal static async void HandleRpcRequest(Session session, Request request)
+        internal static async void HandleRpcRequest(Session session, IRequest request)
         {
             if (rpcHandlers.TryGetValue(request.GetType(), out var info))
             {
                 if (rpcMessagePairs.TryGetValue(info.Request, out var responseType))
                 {
-                    var response = Activator.CreateInstance(responseType) as Response;
-                    response.id = request.id;
+                    var response = Activator.CreateInstance(responseType) as IResponse;
+                    response.Id = request.Id;
                     var task = info.method.Invoke(null, new object[] { session, request, response });
                     await (task as Task);
                     session.Reply(response);
@@ -182,38 +197,38 @@ namespace zFramework.TinyRPC
             }
             var response_fallback = new Response
             {
-                id = request.id,
-                error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！"
+                Id = request.Id,
+                Error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！"
             };
             session.Reply(response_fallback);
         }
-        internal static void HandleRpcResponse(Session session, Response response)
+        internal static void HandleRpcResponse(Session session, IResponse response)
         {
-            if (rpcInfoPairs.TryGetValue(response.id, out var rpcInfo))
+            if (rpcInfoPairs.TryGetValue(response.Id, out var rpcInfo))
             {
                 rpcInfo.task.SetResult(response);
-                rpcInfoPairs.Remove(response.id);
+                rpcInfoPairs.Remove(response.Id);
             }
         }
 
-        internal static Task<Response> AddRpcTask(Request request)
+        internal static Task<IResponse> AddRpcTask(IRequest request)
         {
-            var tcs = new TaskCompletionSource<Response>();
+            var tcs = new TaskCompletionSource<IResponse>();
             var cts = new CancellationTokenSource();
-            var timeout = Mathf.Max(request.timeout, 5);
+            var timeout = Mathf.Max(request.Timeout, 5);//至少等待 5 秒的响应机会，这在发生复杂操作时很有效
             cts.CancelAfter(timeout);
             cts.Token.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false);
             var rpcinfo = new RpcInfo
             {
-                id = request.id,
+                id = request.Id,
                 task = tcs,
             };
-            rpcInfoPairs.Add(request.id, rpcinfo);
+            rpcInfoPairs.Add(request.Id, rpcinfo);
             return tcs.Task;
         }
 
         // 获取消息对应的 Response 类型
-        public static Type GetResponseType([NotNull] Request request)
+        public static Type GetResponseType([NotNull] IRequest request)
         {
             if (!rpcMessagePairs.TryGetValue(request.GetType(), out var type))
             {

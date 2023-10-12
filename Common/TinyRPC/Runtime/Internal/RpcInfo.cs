@@ -6,6 +6,6 @@ namespace zFramework.TinyRPC
     public struct RpcInfo
     {
         public int id;
-        public TaskCompletionSource<Response> task;
+        public TaskCompletionSource<IResponse> task;
     }
 }
