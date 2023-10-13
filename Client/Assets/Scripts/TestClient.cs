@@ -90,7 +90,6 @@ namespace zFramework.TinyRPC.Samples
         #region Client Callbacks
         private void OnPingCaculated(float arg1, int arg2)
         {
-            // 由于是同一PC ，所以客户端与服务器的时间差为0，ping 值和 cmd 中的 ping 值一致
             ping.text = $"Ping: {arg2} ms \n客户端比服务器{(arg1 > 0 ? "慢" : "快")} {Mathf.Abs(arg1):f2} ms";
         }
         private void OnClientDisconnected(Session obj)
