@@ -76,7 +76,6 @@ namespace zFramework.TinyRPC
 
         public static void RegisterAllHandlers()
         {
-
             // store ping message handler internal
             RegisterHandler(typeof(TCPServer));
 
@@ -89,7 +88,6 @@ namespace zFramework.TinyRPC
             {
                 RegisterHandler(handler);
             }
-
             Debug.Log($"{nameof(MessageManager)}:  rpc handles count = {rpcHandlers.Count()}");
             foreach (var item in rpcHandlers)
             {
@@ -215,9 +213,10 @@ namespace zFramework.TinyRPC
         {
             var tcs = new TaskCompletionSource<IResponse>();
             var cts = new CancellationTokenSource();
-            var timeout = Mathf.Max(request.Timeout, 5);//至少等待 5 秒的响应机会，这在发生复杂操作时很有效
+            var timeout = Mathf.Max(request.Timeout, 5000); //至少等待 5 秒的响应机会，这在发生复杂操作时很有效
             cts.CancelAfter(timeout);
-            cts.Token.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false);
+            var exception = new TimeoutException($"RPC Call Timeout! Request: {request}");
+            cts.Token.Register(() => tcs.TrySetException(exception), useSynchronizationContext: false);
             var rpcinfo = new RpcInfo
             {
                 id = request.Id,

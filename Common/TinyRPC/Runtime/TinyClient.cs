@@ -11,20 +11,28 @@ namespace zFramework.TinyRPC
     {
         public bool IsConnected => client != null && client.Connected;
         public Session Session { get; private set; }
+        /// <summary>
+        /// 当客户端连接成功时触发
+        /// </summary>
         public Action<Session> OnClientEstablished;
+        /// <summary>
+        /// 当客户端断开连接时触发
+        /// </summary>
         public Action<Session> OnClientDisconnected;
+        /// <summary>
+        ///  当 Ping 值计算完成时触发
+        ///  <br>参数1：服务器与客户端时间差，用于在客户端上换算服务器时间</br>
+        ///  <br>参数2：ping 值</br>
+        /// </summary>
+        public Action<float, int> OnPingCaculated;
+
         public int PingInterval = 2000;
-        public int PingTimeout = 6000;
         public int PingCount = 3; // retry 3 times if ping timeout
 
         public TinyClient(string ip, int port)
         {
             this.ip = ip;
             this.port = port;
-        }
-
-        public void Start()
-        {
             client = new TcpClient();
             source = new CancellationTokenSource();
             context = SynchronizationContext.Current;
@@ -33,30 +41,33 @@ namespace zFramework.TinyRPC
             {
                 throw new Exception("TinyClient.Start must be called in main thread!");
             }
-            Task.Run(() => ReceiveAsync(source));
-            // how to ping in main thread ? use AsyncOperation ,but need implement IEnumerator for await 
         }
 
-        private async void ReceiveAsync(CancellationTokenSource token)
+        public async Task ConnectAsync()
         {
-            await client.ConnectAsync(ip, port);
-            if (token.IsCancellationRequested) return;
-            Session = new Session(client, context, false);
-            OnClientEstablished?.Invoke(Session);
-            try
-            {
-                _ = Task.Run(Session.ReceiveAsync);
-                //context.Post(v => _ = PingAsync(), null); // ping 在主线程上下文执行
-            }
-            catch (Exception e)
-            {
-                Stop();
-                Debug.LogError(e);
-            }
+            await Task.Run(async () =>
+             {
+                 await client.ConnectAsync(ip, port);
+                 if (source.IsCancellationRequested) return;
+                 Session = new Session(client, context, false);
+                 OnClientEstablished?.Invoke(Session);
+                 try
+                 {
+                     _ = Task.Run(Session.ReceiveAsync);
+                     // ping 在主线程上下文执行 ,避免多线程导致的对 NetworkStream 资源竞争
+                     context.Post(v => _ = PingAsync(), null);
+                 }
+                 catch (Exception e)
+                 {
+                     Stop();
+                     Debug.LogError(e);
+                 }
+             }, source.Token);
         }
 
         public void Stop()
         {
+            if (!IsConnected) return;
             OnClientDisconnected?.Invoke(Session);
             source?.Cancel();
             client?.Close();
@@ -69,24 +80,37 @@ namespace zFramework.TinyRPC
 
         private async Task PingAsync()
         {
-            while (Session.IsAlive)
+            var count = 0;
+            while (IsConnected)
             {
-                Debug.Log($"{nameof(TinyClient)}: start ping ");
-                var begin = DateTime.Now;
-                var ping = await Call<Ping>(new Ping());
-                var end = DateTime.Now;
-                var result = (end - begin).Milliseconds;
-                Debug.Log($"{nameof(TinyClient)}: receive ping , ttl = {result}");
-                Debug.Log($"{nameof(TinyClient)}: before delay thread id = {Thread.CurrentThread.ManagedThreadId}");
-                await Task.Delay(2000);
-                Debug.Log($"{nameof(TinyClient)}: after delay thread id = {Thread.CurrentThread.ManagedThreadId}");
+                try
+                {
+                    var begin = DateTime.Now;
+                    var response = await Call<Ping>(new Ping());
+                    var end = DateTime.Now;
+                    var ping = (end - begin).Milliseconds;
+                    // 服务器与客户端的时间差，用于在客户端上换算服务器时间
+                    var delta = (response.time - ClientTime)/10000.0f+ ping / 2;
+                    OnPingCaculated?.Invoke(delta, ping);
+                    await Task.Delay(PingInterval);
+                }
+                catch (Exception)
+                {
+                    count++;
+                    if (count > PingCount)
+                    {
+                        Stop();
+                        Debug.LogError($"{nameof(TinyClient)}: Ping Timeout!");
+                    }
+                }
             }
         }
 
-        private string ip = "172.0.0.1";
-        private int port = 12345;
+        private readonly string ip = "172.0.0.1";
+        private readonly int port = 12345;
         private TcpClient client;
         private CancellationTokenSource source;
         private SynchronizationContext context;
+        private static long ClientTime => DateTime.UtcNow.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
     }
 }

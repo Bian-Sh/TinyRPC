@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Settings;
 using static zFramework.TinyRPC.MessageManager;
 
 namespace zFramework.TinyRPC
@@ -12,7 +13,7 @@ namespace zFramework.TinyRPC
     public class Session : IDisposable
     {
         public bool IsServerSide { get; }
-        public bool IsAlive { get; private set; } 
+        public bool IsAlive { get; private set; }
 
         // 服务端用于断言Session是否消亡
         public DateTime lastPingSendTime;
@@ -28,22 +29,33 @@ namespace zFramework.TinyRPC
 
         private void Send(MessageType type, byte[] content)
         {
-            var stream = client.GetStream();
-            var body = new byte[content.Length + 1];
-            body[0] = (byte)type;
-            Array.Copy(content, 0, body, 1, content.Length);
-            var head = BitConverter.GetBytes(body.Length);
-            stream.Write(head, 0, head.Length);
-            stream.Write(body, 0, body.Length);
+            try
+            {
+                if (IsAlive)
+                {
+                    var stream = client.GetStream();
+                    var body = new byte[content.Length + 1];
+                    body[0] = (byte)type;
+                    Array.Copy(content, 0, body, 1, content.Length);
+                    var head = BitConverter.GetBytes(body.Length);
+                    stream.Write(head, 0, head.Length);
+                    stream.Write(body, 0, body.Length);
+                }
+                else
+                {
+                    Debug.LogWarning($"{nameof(Session)}: 消息发送失败，会话已失效！");
+                }
+            }
+            catch (Exception e)
+            {
+                Dispose();
+                Debug.LogError($"{nameof(Session)}:  发送消息出现异常 {e}");
+            }
         }
 
         public void Send(IMessage message)
         {
-            var wrapper = new MessageWrapper()
-            {
-                Message = message
-            };
-            var bytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(wrapper));
+            var bytes = SerializeHelper.Serialize(message);
             var messageType = message switch
             {
                 IRequest => MessageType.RPC,
@@ -66,19 +78,15 @@ namespace zFramework.TinyRPC
             {
                 throw new Exception($"RPC Response 消息类型不匹配, 期望值： {type},传入值 {typeof(T)}");
             }
-            // 原子操作，保证 id 永远自增 1且不会溢出
-            if (Interlocked.CompareExchange(ref id, int.MinValue, int.MaxValue) == int.MaxValue)
-            {
-                Interlocked.Increment(ref id);
-            }
-            //写入 request id, id 永远自增 1
-            request.Id = id;
-
-            var bytes = SerializeHelper.Serialize(request);
-            Send(MessageType.RPC, bytes);  // try what? dispose?
-
             try
             {
+                // 原子操作，保证 id 永远自增 1且不会溢出,溢出就从0开始
+                Interlocked.CompareExchange(ref id, 0, int.MaxValue);
+                request.Id = Interlocked.Increment(ref id);
+
+                var bytes = SerializeHelper.Serialize(request);
+                Send(MessageType.RPC, bytes);  // try what? dispose?
+
                 var response = await AddRpcTask(request);
                 if (!string.IsNullOrEmpty(response.Error))// 如果服务器告知了错误！
                 {
@@ -86,9 +94,9 @@ namespace zFramework.TinyRPC
                 }
                 return response as T;
             }
-            catch (TaskCanceledException)//report timeout exception when catch task cancel exception(which means timeout)
+            catch (Exception e)
             {
-                throw new TimeoutException($"RPC Call Timeout! Request: {request}");
+                throw e;
             }
         }
 
@@ -138,25 +146,28 @@ namespace zFramework.TinyRPC
         private void OnMessageReceived(byte type, byte[] content)
         {
             lastPingReceiveTime = DateTime.Now;
-            var json = Encoding.UTF8.GetString(content);
-            Debug.Log($"{nameof(Session)}:  收到网络消息 {(IsServerSide ? "Server" : "Client")} {json}");
-            var wrapper = JsonUtility.FromJson<MessageWrapper>(json);
+
+            var message = SerializeHelper.Deserialize(content);
+            if (!TinyRpcSettings.Instance.LogFilters.Contains(message.GetType().FullName))
+            {
+                Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 =  {JsonUtility.ToJson(message)}");
+            }
             switch (type)
             {
                 case 0: //normal message
                     {
-                        context.Post(_ => HandleNormalMessage(this, wrapper.Message), null);
+                        context.Post(_ => HandleNormalMessage(this, message), null);
                     }
                     break;
                 case 1: // rpc message
                     {
-                        if (wrapper.Message is Request || (wrapper.Message is Ping && IsServerSide))
+                        if (message is Request || (message is Ping && IsServerSide))
                         {
-                            context.Post(_ => HandleRpcRequest(this, wrapper.Message as IRequest), null);
+                            context.Post(_ => HandleRpcRequest(this, message as IRequest), null);
                         }
-                        else if (wrapper.Message is Response || (wrapper.Message is Ping && !IsServerSide))
+                        else if (message is Response || (message is Ping && !IsServerSide))
                         {
-                            context.Post(_ => HandleRpcResponse(this, wrapper.Message as IResponse), null);
+                            context.Post(_ => HandleRpcResponse(this, message as IResponse), null);
                         }
                     }
                     break;
@@ -175,10 +186,9 @@ namespace zFramework.TinyRPC
             source?.Dispose();
             IsAlive = false;
         }
-
+        private static int id = 0;
         private readonly TcpClient client;
         private readonly CancellationTokenSource source;
         private readonly SynchronizationContext context;
-        private static int id = 0;
     }
 }
