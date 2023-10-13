@@ -1,4 +1,3 @@
-using System.Net;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC;
@@ -43,7 +42,7 @@ public class TestServer : MonoBehaviour
     {
         Debug.Log($"{nameof(TestServer)}: Receive {session} request {request}");
         await Task.Delay(1000);
-        response.name = "response after rpc";
+        response.name = "response  from  tinyrpc server !";
     }
     #endregion
 }
