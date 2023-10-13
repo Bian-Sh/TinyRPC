@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 namespace zFramework.TinyRPC.Settings
@@ -12,7 +13,12 @@ namespace zFramework.TinyRPC.Settings
     public class TinyRpcSettings : ScriptableObject
     {
         //specific from which assembly you can collect handlers
-        public string[] AssemblyNames = new string[] {"Assembly-CSharp" };
+        public string[] AssemblyNames = new string[] { "Assembly-CSharp" };
+
+        //filter log message, default is Ping (must use full type name here)
+        public List<string> LogFilters = new List<string> { "zFramework.TinyRPC.Ping" };
+
+
 
         private void Awake()
         {
