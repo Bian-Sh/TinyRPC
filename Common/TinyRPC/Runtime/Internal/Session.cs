@@ -29,31 +29,23 @@ namespace zFramework.TinyRPC
 
         private void Send(MessageType type, byte[] content)
         {
-            try
+            if (IsAlive)
             {
-                if (IsAlive)
-                {
-                    var stream = client.GetStream();
-                    var body = new byte[content.Length + 1];
-                    body[0] = (byte)type;
-                    Array.Copy(content, 0, body, 1, content.Length);
-                    var head = BitConverter.GetBytes(body.Length);
-                    stream.Write(head, 0, head.Length);
-                    stream.Write(body, 0, body.Length);
-                }
-                else
-                {
-                    Debug.LogWarning($"{nameof(Session)}: 消息发送失败，会话已失效！");
-                }
+                var stream = client.GetStream();
+                var body = new byte[content.Length + 1];
+                body[0] = (byte)type;
+                Array.Copy(content, 0, body, 1, content.Length);
+                var head = BitConverter.GetBytes(body.Length);
+                stream.Write(head, 0, head.Length);
+                stream.Write(body, 0, body.Length);
             }
-            catch (Exception e)
+            else
             {
-                Dispose();
-                Debug.LogError($"{nameof(Session)}:  发送消息出现异常 {e}");
+                Debug.LogWarning($"{nameof(Session)}: 消息发送失败，会话已失效！");
             }
         }
 
-        public void Send(IMessage message)
+        internal void Send(IMessage message)
         {
             var bytes = SerializeHelper.Serialize(message);
             var messageType = message switch
@@ -67,10 +59,10 @@ namespace zFramework.TinyRPC
             Send(messageType, bytes);
         }
 
-        public void Reply(IMessage message) => Send(message);
+        internal void Reply(IMessage message) => Send(message);
 
         // 写注释，特别强调2组Exception: 
-        public async Task<T> Call<T>(IRequest request) where T : class, IResponse, new()
+        internal async Task<T> Call<T>(IRequest request) where T : class, IResponse, new()
         {
             // 校验 RPC 消息匹配
             var type = GetResponseType(request);
@@ -78,31 +70,22 @@ namespace zFramework.TinyRPC
             {
                 throw new Exception($"RPC Response 消息类型不匹配, 期望值： {type},传入值 {typeof(T)}");
             }
-            try
-            {
-                // 原子操作，保证 id 永远自增 1且不会溢出,溢出就从0开始
-                Interlocked.CompareExchange(ref id, 0, int.MaxValue);
-                request.Id = Interlocked.Increment(ref id);
+            // 原子操作，保证 id 永远自增 1且不会溢出,溢出就从0开始
+            Interlocked.CompareExchange(ref id, 0, int.MaxValue);
+            request.Id = Interlocked.Increment(ref id);
 
-                var bytes = SerializeHelper.Serialize(request);
-                Send(MessageType.RPC, bytes);  // try what? dispose?
+            var bytes = SerializeHelper.Serialize(request);
+            Send(MessageType.RPC, bytes);  // try what? dispose?
 
-                var response = await AddRpcTask(request);
-                if (!string.IsNullOrEmpty(response.Error))// 如果服务器告知了错误！
-                {
-                    throw new RpcException($"Rpc Handler Error :{response.Error}");
-                }
-                return response as T;
-            }
-            catch (Exception e)
+            var response = await AddRpcTask(request);
+            if (!string.IsNullOrEmpty(response.Error))// 如果服务器告知了错误！
             {
-                throw e;
+                throw new RpcException($"Rpc Handler Error :{response.Error}");
             }
+            return response as T;
         }
 
-        public NetworkStream GetStream() => client.GetStream();
-
-        public async void ReceiveAsync()
+        internal async void ReceiveAsync()
         {
             var stream = client.GetStream();
             while (!source.IsCancellationRequested)

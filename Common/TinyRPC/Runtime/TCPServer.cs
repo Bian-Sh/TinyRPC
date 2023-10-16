@@ -17,22 +17,11 @@ namespace zFramework.TinyRPC
     // 会话：Session = TcpClient + lastSendTime + lastReceiveTime 
     public class TCPServer
     {
-        internal TcpListener listener;
         internal readonly List<Session> sessions = new List<Session>();
-        readonly SynchronizationContext context;
         public event Action<Session> OnClientEstablished;
         public event Action<Session> OnClientDisconnected;
         public event Action<string> OnServerClosed;
 
-        CancellationTokenSource source;
-
-        #region Field Ping
-        internal float pingInterval = 2f;
-        // 如果pingTimeout秒内没有收到客户端的消息，则断开连接
-        // 在 interval = 2 时代表 retry 了 5 次
-        internal float pingTimeout = 10f;
-        Timer timer;
-        #endregion
         public TCPServer(int port)
         {
             context = SynchronizationContext.Current;
@@ -52,12 +41,10 @@ namespace zFramework.TinyRPC
             {
                 session?.Close();
             }
-
-            timer?.Dispose();
             source?.Cancel();
             listener?.Stop();
             sessions.Clear();
-            OnServerClosed?.Invoke("服务器已关闭");
+            context.Post(v => OnServerClosed?.Invoke("服务器已关闭"), null);
         }
 
 
@@ -70,17 +57,15 @@ namespace zFramework.TinyRPC
                     var client = await listener.AcceptTcpClientAsync();
                     var session = new Session(client, context, true);
                     sessions.Add(session);
-                    OnClientEstablished?.Invoke(session);
+                    context.Post(v => OnClientEstablished?.Invoke(session), null);
                     try
                     {
                         _ = Task.Run(session.ReceiveAsync);
                     }
                     catch (Exception e)
                     {
-                        session.Close();
-                        sessions.Remove(session);
-                        OnClientDisconnected?.Invoke(session);
                         Debug.Log($"{nameof(TCPServer)}:  Session is disconnected! \n{session}\n{e}");
+                        HandleDisactiveSession(session);
                     }
                 }
                 catch (Exception e)
@@ -98,6 +83,36 @@ namespace zFramework.TinyRPC
             }
         }
 
+        public async Task<T> Call<T>(Session session, IRequest request) where T : class, IResponse, new()
+        {
+            T response = null;
+            try
+            {
+                if (session == null)
+                {
+                    return response;
+                }
+                response = await session?.Call<T>(request);
+            }
+            catch (RpcException re)
+            {
+                Debug.LogError($"{nameof(TinyClient)}: RPC Excption {re}");
+            }
+            catch (TimeoutException te)
+            {
+                Debug.LogError($"{nameof(TinyClient)}: RPC Timeout {te}");
+            }
+            //未知异常直接关断会话
+            //如果还有其他已知不应该关断会话的可以在这里插入
+            catch (Exception e)
+            {
+                Debug.LogError($"{nameof(TinyClient)}: RPC Error {e}");
+                HandleDisactiveSession(session);
+            }
+            return response;
+        }
+
+
         public void Send(Session session, Message message)
         {
             try
@@ -107,10 +122,15 @@ namespace zFramework.TinyRPC
             catch (Exception)
             {
                 //如果消息发送失败，说明客户端已经断开连接，需要移除
-                session.Close();
-                sessions.Remove(session);
-                OnClientDisconnected?.Invoke(session);
+                HandleDisactiveSession(session);
             }
+        }
+
+        private void HandleDisactiveSession(Session session)
+        {
+            session.Close();
+            sessions.Remove(session);
+            context.Post(v => OnClientDisconnected?.Invoke(session), null);
         }
 
         #region Ping Message Handler
@@ -123,6 +143,9 @@ namespace zFramework.TinyRPC
         }
         #endregion
 
+        internal TcpListener listener;
+        readonly SynchronizationContext context;
+        CancellationTokenSource source;
         private static long ServerTime => DateTime.UtcNow.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
     }
 }
