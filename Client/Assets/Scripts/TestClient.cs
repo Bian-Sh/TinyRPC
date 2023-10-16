@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 namespace zFramework.TinyRPC.Samples
 {
+    [MessageHandlerProvider]
     public class TestClient : MonoBehaviour
     {
         #region UI Component
@@ -56,17 +57,24 @@ namespace zFramework.TinyRPC.Samples
             _ = TextLoadingEffectAsync(tcs);
 
             //2. 模拟一个延迟完成的登录效果
-            var delay = Task.Delay(3000);
+            var delay = Task.Delay(3000).ContinueWith(v => false);
             var task = client.ConnectAsync();
-            await Task.WhenAll(delay, task);
-
+            bool[] result = await Task.WhenAll(delay, task);
+            Debug.Log($"{nameof(TestClient)}: result1 {result[0]} , result2{result[1]}");
             //3. 取消登录中...的显示
             tcs.Cancel();
             Debug.Log($"{nameof(TestClient)}:  Thread id = {Thread.CurrentThread.ManagedThreadId}");
-            //4. 转换 connect 字样为 disconnect
-            connect.GetComponentInChildren<Text>().text = "Disconnect";
+            if (result[1])
+            {
+                //4. 转换 connect 字样为 disconnect
+                connect.GetComponentInChildren<Text>().text = "Disconnect";
+                Debug.Log($"{nameof(TestClient)}: Client Started");
+            }
+            else
+            {
+                connect.GetComponentInChildren<Text>().text = "Connect";
+            }
             connect.interactable = true;
-            Debug.Log($"{nameof(TestClient)}: Client Started");
         }
 
         public async void SendRPCAsync()
@@ -92,14 +100,17 @@ namespace zFramework.TinyRPC.Samples
         {
             ping.text = $"Ping: {arg2} ms \n客户端比服务器{(arg1 > 0 ? "慢" : "快")} {Mathf.Abs(arg1):f2} ms";
         }
-        private void OnClientDisconnected(Session obj)
+        private void OnClientDisconnected()
         {
-            Debug.Log($"{nameof(TestClient)}: Client Disconnected {obj}");
+            Debug.Log($"{nameof(TestClient)}: Client Disconnected ");
+            client = null;
+            connect.GetComponentInChildren<Text>().text = "Connect";
+            ping.text = "已断线";
         }
 
-        private void OnClientEstablished(Session obj)
+        private void OnClientEstablished()
         {
-            Debug.Log($"{nameof(TestClient)}: Client Connected {obj}");
+            Debug.Log($"{nameof(TestClient)}: Client Connected {client.Session}");
         }
         #endregion
 
@@ -119,5 +130,14 @@ namespace zFramework.TinyRPC.Samples
             }
         }
         #endregion
+
+
+        [MessageHandler(MessageType.RPC)]
+        private static async Task RPCMessageHandler(Session session, TestRPCRequest request, TestRPCResponse response)
+        {
+            Debug.Log($"{nameof(TestClient)}: Receive {session} request {request}");
+            await Task.Delay(500);
+            response.name = "response  from  tinyrpc client !";
+        }
     }
 }
