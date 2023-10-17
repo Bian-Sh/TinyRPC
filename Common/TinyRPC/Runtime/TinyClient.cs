@@ -4,6 +4,7 @@ using System.Threading;
 using System;
 using zFramework.TinyRPC.DataModel;
 using System.Threading.Tasks;
+using zFramework.TinyRPC.Exceptions;
 
 namespace zFramework.TinyRPC
 {
@@ -53,17 +54,8 @@ namespace zFramework.TinyRPC
                      if (source.IsCancellationRequested) return false;
                      Session = new Session(client, context, false);
                      context.Post(v => OnClientEstablished?.Invoke(), null);
-                     try
-                     {
-                         _ = Task.Run(Session.ReceiveAsync);
-                         // ping 在主线程上下文执行 ,避免多线程导致的对 NetworkStream 资源竞争
-                         context.Post(v => _ = PingAsync(), null);
-                     }
-                     catch (Exception e)
-                     {
-                         Stop();
-                         Debug.LogError(e);
-                     }
+                     _ = Task.Run(ReceiveAsync);
+                     context.Post(v => _ = PingAsync(), null);// ping 在主线程上下文执行 ,避免多线程导致各种资源竞争
                      return true;
                  }
                  catch (Exception e)
@@ -79,7 +71,7 @@ namespace zFramework.TinyRPC
             if (!IsConnected) return;
             context.Post(v => OnClientDisconnected?.Invoke(), null);
             source?.Cancel();
-            Session?.Dispose();
+            Session?.Close();
             source = null;
             client = null;
         }
@@ -104,17 +96,10 @@ namespace zFramework.TinyRPC
             {
                 response = await Session?.Call<T>(request);
             }
-            catch (RpcException re)
-            {
-                Debug.LogError($"{nameof(TinyClient)}: RPC Excption {re}");
-            }
-            catch (TimeoutException te)
-            {
-                Debug.LogError($"{nameof(TinyClient)}: RPC Timeout {te}");
-            }
+            // RpcResponseException  和 TimeoutException 不应该关断会话,同时应该上报，Ping 需要知道
             //未知异常直接关断会话
             //如果还有其他已知不应该关断会话的可以在这里插入
-            catch (Exception e)
+            catch (Exception e) when (e is not RpcResponseException && e is not TimeoutException)
             {
                 Debug.LogError($"{nameof(TinyClient)}: RPC Error {e}");
                 Stop();
@@ -124,7 +109,7 @@ namespace zFramework.TinyRPC
 
         private async Task PingAsync()
         {
-            var count = 0;
+            var count = 1;
             while (IsConnected)
             {
                 try
@@ -138,14 +123,42 @@ namespace zFramework.TinyRPC
                     OnPingCaculated?.Invoke(delta, ping);
                     await Task.Delay(PingInterval);
                 }
-                catch (Exception)
+                // 只有当收到的异常是 RpcResponseException  或者 TimeoutException 时才重试
+                catch (Exception e) when (e is RpcResponseException || e is TimeoutException)
                 {
+                    Debug.LogError($"{nameof(TinyClient)}: Ping Error {e} ， retry count  = {count}");
                     count++;
                     if (count > PingCount)
                     {
                         Stop();
                         Debug.LogError($"{nameof(TinyClient)}: Ping Timeout!");
                     }
+                }
+                // 其他异常就没有重试的必要了，直接关断会话
+                catch (Exception e)
+                {
+                    Debug.LogError($"{nameof(TinyClient)}: Ping Error {e} , Session Stoped ");
+                    Stop();
+                }
+            }
+        }
+
+        // 需要对 session ReceiveAsync 进行异常处理
+        // 故而先前的调用（见 git 历史）被修正为当前你看到的这种状态
+        // 同理可得，Send、Call 皆是如此
+        private async void ReceiveAsync()
+        {
+            while (!source.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    await Session.ReceiveAsync();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"{nameof(TinyClient)}: Receive Error {e}");
+                    Stop();
+                    break;
                 }
             }
         }

@@ -1,27 +1,33 @@
 ﻿using System;
+using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Exceptions;
 using zFramework.TinyRPC.Settings;
 using static zFramework.TinyRPC.MessageManager;
 
 namespace zFramework.TinyRPC
 {
-    public class Session : IDisposable
+    public class Session 
     {
         public bool IsServerSide { get; }
         public bool IsAlive { get; private set; }
+        public IPEndPoint IPEndPoint { get; private set; }
 
-        // 服务端用于断言Session是否消亡
-        public DateTime lastPingSendTime;
-        public DateTime lastPingReceiveTime;
-        public Session(TcpClient client, SynchronizationContext context, bool isServerSide)
+        internal Session(TcpClient client, SynchronizationContext context, bool isServerSide)
         {
             IsServerSide = isServerSide;
             this.client = client;
+
+            // 深度拷贝 IPEndPoint 用于在任意时候描述 Session （只要这个 Session 还能被访问）
+            var iPEndPoint = (IsServerSide ? client.Client.RemoteEndPoint : client.Client.LocalEndPoint) as IPEndPoint;
+            var address = IPAddress.Parse(iPEndPoint.Address.ToString());
+            var port = iPEndPoint.Port;
+            IPEndPoint = new IPEndPoint(address, port);
+
             this.source = new CancellationTokenSource();
             this.context = context;
             IsAlive = true;
@@ -75,17 +81,17 @@ namespace zFramework.TinyRPC
             request.Id = Interlocked.Increment(ref id);
 
             var bytes = SerializeHelper.Serialize(request);
-            Send(MessageType.RPC, bytes);  // try what? dispose?
+            Send(MessageType.RPC, bytes);  // do not catch any exception here,jut let it throw out
 
             var response = await AddRpcTask(request);
             if (!string.IsNullOrEmpty(response.Error))// 如果服务器告知了错误！
             {
-                throw new RpcException($"Rpc Handler Error :{response.Error}");
+                throw new RpcResponseException($"Rpc Handler Error :{response.Error}");
             }
             return response as T;
         }
 
-        internal async void ReceiveAsync()
+        internal async Task ReceiveAsync()
         {
             var stream = client.GetStream();
             while (!source.IsCancellationRequested)
@@ -128,8 +134,6 @@ namespace zFramework.TinyRPC
 
         private void OnMessageReceived(byte type, byte[] content)
         {
-            lastPingReceiveTime = DateTime.Now;
-
             var message = SerializeHelper.Deserialize(content);
             if (!TinyRpcSettings.Instance.LogFilters.Contains(message.GetType().FullName))
             {
@@ -159,12 +163,9 @@ namespace zFramework.TinyRPC
             }
         }
 
-        public override string ToString() => $"Session: {client.Client.RemoteEndPoint}  IsServer:{IsServerSide}";
-        public void Close() => client?.Close();
-
-        public void Dispose()
+        public override string ToString() => $"Session: {IPEndPoint}  IsServer:{IsServerSide}";
+        public void Close()
         {
-            client?.Close();
             client?.Dispose();
             source?.Dispose();
             IsAlive = false;

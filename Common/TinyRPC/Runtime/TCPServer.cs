@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Exceptions;
 
 namespace zFramework.TinyRPC
 {
@@ -17,11 +18,9 @@ namespace zFramework.TinyRPC
     // 会话：Session = TcpClient + lastSendTime + lastReceiveTime 
     public class TCPServer
     {
-        internal readonly List<Session> sessions = new List<Session>();
         public event Action<Session> OnClientEstablished;
         public event Action<Session> OnClientDisconnected;
         public event Action<string> OnServerClosed;
-
         public TCPServer(int port)
         {
             context = SynchronizationContext.Current;
@@ -58,19 +57,31 @@ namespace zFramework.TinyRPC
                     var session = new Session(client, context, true);
                     sessions.Add(session);
                     context.Post(v => OnClientEstablished?.Invoke(session), null);
-                    try
-                    {
-                        _ = Task.Run(session.ReceiveAsync);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.Log($"{nameof(TCPServer)}:  Session is disconnected! \n{session}\n{e}");
-                        HandleDisactiveSession(session);
-                    }
+                    _ = Task.Run(() => ReceiveAsync(session));
                 }
                 catch (Exception e)
                 {
                     Debug.Log(e);
+                }
+            }
+        }
+
+        // 需要对 session ReceiveAsync 进行异常处理
+        // 故而先前的调用（_=Task.Run(session.ReceiveAsync)被修正为当前样式
+        // 同理可得，Send、Call 皆是如此
+        private async void ReceiveAsync(Session session)
+        {
+            while (session.IsAlive)
+            {
+                try
+                {
+                    await session.ReceiveAsync();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"{nameof(TCPServer)}: Receive Error {e}");
+                    HandleDisactiveSession(session);
+                    break;
                 }
             }
         }
@@ -94,11 +105,11 @@ namespace zFramework.TinyRPC
                 }
                 response = await session?.Call<T>(request);
             }
-            catch (RpcException re)
+            catch (RpcResponseException re)
             {
-                Debug.LogError($"{nameof(TinyClient)}: RPC Excption {re}");
+                Debug.LogError($"{nameof(TinyClient)}: RPC Response Excption {re}");
             }
-            catch (TimeoutException te)
+            catch (RpcTimeoutException te)
             {
                 Debug.LogError($"{nameof(TinyClient)}: RPC Timeout {te}");
             }
@@ -126,12 +137,20 @@ namespace zFramework.TinyRPC
             }
         }
 
+
+
+        #region Assistant Function
         private void HandleDisactiveSession(Session session)
         {
+            Debug.Log($"{nameof(TCPServer)}:  Session is disconnected! \n{session}");
             session.Close();
-            sessions.Remove(session);
+            lock (sessions)
+            {
+                sessions.Remove(session);
+            }
             context.Post(v => OnClientDisconnected?.Invoke(session), null);
         }
+        #endregion
 
         #region Ping Message Handler
         [MessageHandler(MessageType.RPC)]
@@ -146,6 +165,7 @@ namespace zFramework.TinyRPC
         internal TcpListener listener;
         readonly SynchronizationContext context;
         CancellationTokenSource source;
+        internal readonly List<Session> sessions = new List<Session>();
         private static long ServerTime => DateTime.UtcNow.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
     }
 }

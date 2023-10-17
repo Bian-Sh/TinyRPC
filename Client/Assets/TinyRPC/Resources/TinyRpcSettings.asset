@@ -14,3 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AssemblyNames:
   - Assembly-CSharp
+  LogFilters:
+  - zFramework.TinyRPC.Ping
