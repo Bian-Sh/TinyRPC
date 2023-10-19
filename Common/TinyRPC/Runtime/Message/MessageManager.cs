@@ -250,22 +250,24 @@ namespace zFramework.TinyRPC
          }
          */
 
-        //todo ：加入 message id 机制, 用于快速获取消息Type,方便调试
-        // 我需要写一些代码分析器，实现以下功能：
-        // 约定：MessageHandlerAttribute 的出现触发代码分析器
-        //
+        //todo ：
+        // 加入 message id 机制, 用于快速获取消息Type,方便调试
+        // id 使用二进制偏移表示，这样方便 与、或 运算判断消息是否存在于 logfilter，作为消息的身份id也很合理
+        // .proto 就参考 et6.0 的 protobuf 语法，自己解析，支持多 proto文件，支持输出多脚本（partial）
+        // 看实际情况，可能不需要代码分析器了，
         // 关于 IL 代码注入：
-        //1. 取消 MessageHandlerAttribute 的使用，改为自动注册，但要求 il 代码注入
-        // 2. 使用 IL 代码注入，自动为包含了 MessageHandler 的 Type 生成静态构造函数（如果有则插入逻辑），用于注册 MessageHandler
-        // 3. 如果用户删除了 MessageHandlerAttribute，自动删除静态构造函数
-        // 4. 如果用户自己写了静态构造函数，不要自动删除，但剔除 MessageHandlerAttribute 的注册逻辑
+        // 1. 取消 MessageHandlerAttribute 的使用，改为在静态函数中自动注册
+        // 2. 如果用户删除了 MessageHandlerAttribute，自动删除静态构造函数内的注册逻辑，如果因此静态函数body空了就删除静态函数
         //
         // 关于撰写 Server 端 handler是否符合规范：
-        // 0. 不管是 Normal 消息还是 RPC 消息，必须是静态方法且 RPC 消息返回值必须是 Task
+        // 0. 如果使用 MessageHandler 标记，不管是 Normal 消息还是 RPC 消息，必须是静态方法且 RPC 消息返回值必须是 Task
         // 1. 如果是 RPC 消息，必须有3个参数，第一个参数为 Session，第二个参数为 Request，第三个参数为 Response
         // 2. 如果是 Normal 消息，必须有2个参数，第一个参数为 Session，第二个参数为 Message
-        // 3.  RPC Hanlder 理应在客户端上也能实现，进而实现 Server call Client 
-        // 4.  RPC Handler 的 Request 需要上报 RPC Server（可能是客户端）没有实现 Handler 的情况
+        // 3. RPC Hanlder 理应在客户端上也能实现，进而实现 Server call Client （已经验证）
+        // 4. RPC Handler 的 Request 需要上报 RPC Server（可能是客户端）没有实现 Handler 的情况（已经实现）
+        // 5. 支持 MessageHandler 标记消息处理器，也支持 AddHandler 、RemoveHandler 让用户自发添加消息处理器（观察者模式）
+        // 6. RPC 、Normal 都支持用户自发的 AddHandler、RemoveHandler
+        // 7. 使用委托注册而不是反射来处理 handler 的注册
 
         class NormalHandlerInfo : BaseHandlerInfo
         {
