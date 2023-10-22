@@ -154,11 +154,11 @@ namespace zFramework.TinyRPC
 
         #region Ping Message Handler
         [MessageHandler(MessageType.RPC)]
-        private static async Task OnPingRecevied(Session session, Ping request, Ping response)
+        internal static async Task OnPingReceived(Session session, Ping request, Ping response)
         {
             response.Id = request.Id;
             response.time = ServerTime;
-            await Task.Yield();
+            await Task.CompletedTask;
         }
         #endregion
 

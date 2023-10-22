@@ -11,7 +11,7 @@ using static zFramework.TinyRPC.MessageManager;
 
 namespace zFramework.TinyRPC
 {
-    public class Session 
+    public class Session
     {
         public bool IsServerSide { get; }
         public bool IsAlive { get; private set; }
@@ -101,7 +101,7 @@ namespace zFramework.TinyRPC
                 var byteReaded = await stream.ReadAsync(head, 0, head.Length, source.Token);
                 if (byteReaded == 0)
                 {
-                    throw new Exception("断开连接！");
+                    throw new Exception("在读取消息头时网络连接意外断开！");
                 }
                 // 读出消息的内容
                 var bodySize = BitConverter.ToInt32(head, 0);
@@ -116,26 +116,26 @@ namespace zFramework.TinyRPC
                     // 读着读着就断线了的情况，如果不处理，此处会产生死循环
                     if (readed == 0)
                     {
-                        throw new Exception("断开连接！");
+                        throw new Exception("在读取消息体时网络连接意外断开！");
                     }
                     byteReaded += readed;
                 }
                 if (bodySize != byteReaded) // 消息不完整，此为异常，断开连接
                 {
-                    throw new Exception("消息不完整,会话断开！");
+                    throw new Exception("在读取网络消息时得到了不完整数据,会话断开！");
                 }
                 // 解析消息类型
                 var type = body[0];
                 var content = new byte[body.Length - 1];
                 Array.Copy(body, 1, content, 0, content.Length);
-                OnMessageReceived(type, content);
+                context.Post(_ => OnMessageReceived(type, content), null);
             }
         }
 
         private void OnMessageReceived(byte type, byte[] content)
         {
             var message = SerializeHelper.Deserialize(content);
-            if (!TinyRpcSettings.Instance.LogFilters.Contains(message.GetType().FullName))
+            if (!TinyRpcSettings.Instance.LogFilters.Contains(message.GetType().FullName)) //Settings can only be created in main thread
             {
                 Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 =  {JsonUtility.ToJson(message)}");
             }
@@ -143,18 +143,18 @@ namespace zFramework.TinyRPC
             {
                 case 0: //normal message
                     {
-                        context.Post(_ => HandleNormalMessage(this, message), null);
+                        HandleNormalMessage(this, message);
                     }
                     break;
                 case 1: // rpc message
                     {
                         if (message is Request || (message is Ping && IsServerSide))
                         {
-                            context.Post(_ => HandleRpcRequest(this, message as IRequest), null);
+                            HandleRpcRequest(this, message as IRequest);
                         }
                         else if (message is Response || (message is Ping && !IsServerSide))
                         {
-                            context.Post(_ => HandleRpcResponse(this, message as IResponse), null);
+                            HandleRpcResponse(this, message as IResponse);
                         }
                     }
                     break;

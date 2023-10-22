@@ -8,11 +8,6 @@ using zFramework.TinyRPC;
 public class SomeLogicTest : MonoBehaviour
 {
 
-    [Button("注册 消息和消息处理器")]
-    void TestJsonUtility()
-    {
-        MessageManager.Awake();
-    }
 
 
 }
