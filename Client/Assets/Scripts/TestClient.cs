@@ -1,7 +1,10 @@
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
+using zFramework.TinyRPC.Generated;
+
 namespace zFramework.TinyRPC.Samples
 {
     [MessageHandlerProvider]
@@ -10,6 +13,7 @@ namespace zFramework.TinyRPC.Samples
         #region UI Component
         public Button connect;
         public Button sendrpc;
+        public Button sendNormalMessage;
         public Text ping;
         #endregion
 
@@ -21,7 +25,27 @@ namespace zFramework.TinyRPC.Samples
         {
             connect.onClick.AddListener(OnConnectedButtonClicked);
             sendrpc.onClick.AddListener(SendRPCAsync);
+            sendNormalMessage.onClick.AddListener(SendNormalMessage);
         }
+
+        private void SendNormalMessage()
+        {
+            if (client != null && client.IsConnected)
+            {
+                var message = new TestMessage
+                {
+                    message = "normal message from tinyrpc client",
+                    age = 999
+                };
+                Debug.Log($"{nameof(TestClient)}: Send Test Message ！{message}");
+                client.Send(message);
+            }
+            else
+            {
+                Debug.LogWarning($"{nameof(TestClient)}: Please Connect Server First！");
+            }
+        }
+
         private void OnApplicationQuit() => client?.Stop();
         #endregion
 
