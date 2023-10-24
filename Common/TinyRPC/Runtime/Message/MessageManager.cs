@@ -172,15 +172,7 @@ namespace zFramework.TinyRPC
             }
         }
 
-        internal static void HandleNormalMessage(Session session, IMessage message)
-        {
-            if (normalHandlers.TryGetValue(message.GetType(), out var info))
-            {
-                info.method.Invoke(null, new object[] { session, message });
-            }
-        }
-
-        internal static async void HandleRpcRequest(Session session, IRequest request)
+         internal static async void HandleRpcRequest(Session session, IRequest request)
         {
             var type = request.GetType();
             IResponse response;
