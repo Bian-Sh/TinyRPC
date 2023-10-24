@@ -1,9 +1,10 @@
 using System;
 using System.Threading.Tasks;
-using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.UI;
 using zFramework.TinyRPC;
+using zFramework.TinyRPC.Generated;
+
 [MessageHandlerProvider]
 public class TestServer : MonoBehaviour
 {
@@ -11,14 +12,35 @@ public class TestServer : MonoBehaviour
     TCPServer server;
     Session session;
     public Button button;
+    public Button button2;
     private void Start()
     {
         button.onClick.AddListener(SendRPC);
+        button2.onClick.AddListener(SendNormalMessage);
+
         server = new TCPServer(port);
         server.OnClientEstablished += Server_OnClientEstablished;
         server.OnClientDisconnected += Server_OnClientDisconnected;
         server.Start();
         Debug.Log($"{nameof(TestServer)}:  server started on port = {port} ！！！");
+    }
+
+    private void SendNormalMessage()
+    {
+        if (session != null)
+        {
+            var message = new TestMessage
+            {
+                message = "normal message from tinyrpc SERVER",
+                age = 8888
+            };
+            Debug.Log($"{nameof(TestServer)}: Send Test Message ！");
+            server.Send(session, message);
+        }
+        else
+        {
+            Debug.LogWarning($"{nameof(TestServer)}: 还没有客户端登录哦！");
+        }
     }
 
     private async void SendRPC()
@@ -59,7 +81,7 @@ public class TestServer : MonoBehaviour
 
     #region Custom Handlers
     [MessageHandler(MessageType.Normal)]
-    private static void MessageHandler(Session session, TestClass message)
+    private static void MessageHandler(Session session, TestMessage message)
     {
         // todo 
     }
