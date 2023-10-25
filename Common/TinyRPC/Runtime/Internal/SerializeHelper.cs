@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Messages;
 
 namespace zFramework.TinyRPC
 {

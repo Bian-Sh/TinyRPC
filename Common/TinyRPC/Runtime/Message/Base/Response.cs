@@ -1,6 +1,6 @@
 using System;
 
-namespace zFramework.TinyRPC.DataModel
+namespace zFramework.TinyRPC.Messages
 {
     [Serializable]
     public class Response :  IResponse

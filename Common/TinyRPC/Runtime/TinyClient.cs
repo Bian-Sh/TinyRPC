@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Net.Sockets;
 using System.Threading;
 using System;
-using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Messages;
 using System.Threading.Tasks;
 using zFramework.TinyRPC.Exceptions;
 

@@ -1,46 +1,29 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Messages;
+using static zFramework.TinyRPC.MessageManager;
 
 namespace zFramework.TinyRPC
 {
-    public class NormalMessageHandler : INormalMessageHandler
+    public class NormalMessageHandler<T> : INormalMessageHandler where T : IMessage
     {
-        public readonly static Dictionary<Type, INormalMessageHandler> handlers = new();
-
-        internal static void HandleNormalMessage(Session session, IMessage message)
-        {
-            if (handlers.TryGetValue(message.GetType(), out var handler))
-            {
-                handler.Invoke(session, message);
-            }
-            else
-            {
-                Debug.LogWarning($"{nameof(NormalMessageHandler)}: no handler for message type {message.GetType()}");
-            }
-        }
-
-        public virtual void Invoke(Session session, IMessage message) { }
-    }
-    public class NormalMessageHandler<T> : NormalMessageHandler where T : IMessage
-    {
-        readonly List<Action<Session, T>> tasks = new();
+        readonly List<HandlerInfo> handlerInfos = new();
         /// <summary>
-        ///  实例化时自动注册到 handlers
+        ///  实例化时自动注册到 normal handlers
         /// </summary>
         /// <exception cref="ArgumentException">如果已经存在相同类型的 handler</exception>
-        public NormalMessageHandler() => handlers.Add(typeof(T), this);
+        public NormalMessageHandler() => NormalMessageHandlers.Add(typeof(T), this);
 
-        public override void Invoke(Session session, IMessage message)
+        public  void Invoke(Session session, IMessage message)
         {
             if (message is T t)
             {
-                foreach (var task in tasks)
+                foreach (var handlerInfo in handlerInfos)
                 {
                     try
                     {
-                        task.Invoke(session, t);
+                        handlerInfo.task.Invoke(session, t);
                     }
                     catch (Exception e)
                     {
@@ -49,16 +32,40 @@ namespace zFramework.TinyRPC
                 }
             }
         }
-        public void AddTask(Action<Session, T> task)
+
+        /// <summary>
+        ///  添加任务
+        /// </summary>
+        /// <param name="task">任务</param>
+        /// <param name="priority">优先级，值越大越优先</param>
+        public void AddTask(Action<Session, T> task, int priority)
         {
-            if (tasks.Contains(task))
+            if (handlerInfos.Exists(v => v.task == task))
             {
                 Debug.LogWarning($"{nameof(NormalMessageHandler<T>)}: task already exists");
                 return;
             }
-            tasks.Add(task);
+            handlerInfos.Add(new HandlerInfo { task = task, priority = priority });
+            handlerInfos.Sort((a, b) => b.priority - a.priority);
         }
 
-        internal void RemoveTask(Action<Session, T> task) => tasks.Remove(task);
+        internal void RemoveTask(Action<Session, T> task)
+        {
+            var index = handlerInfos.FindIndex(v => v.task == task);
+            if (index != -1)
+            {
+                handlerInfos.RemoveAt(index);
+            }
+            else
+            {
+                Debug.LogWarning($"{nameof(NormalMessageHandler<T>)}: task not found");
+            }
+        }
+
+        struct HandlerInfo
+        {
+            public Action<Session, T> task;
+            public int priority;
+        }
     }
 }

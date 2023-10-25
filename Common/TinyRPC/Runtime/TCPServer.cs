@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Messages;
 using zFramework.TinyRPC.Exceptions;
 
 namespace zFramework.TinyRPC
@@ -77,7 +77,7 @@ namespace zFramework.TinyRPC
                 {
                     await session.ReceiveAsync();
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not RpcTimeoutException || e is not RpcResponseException)
                 {
                     Debug.LogError($"{nameof(TCPServer)}: Receive Error {e}");
                     HandleDisactiveSession(session);

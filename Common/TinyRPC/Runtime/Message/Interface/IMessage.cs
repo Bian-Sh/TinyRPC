@@ -1,4 +1,4 @@
-namespace zFramework.TinyRPC.DataModel
+namespace zFramework.TinyRPC.Messages
 {
     public interface IMessage
     {

@@ -4,11 +4,10 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Messages;
 using zFramework.TinyRPC.Exceptions;
 using zFramework.TinyRPC.Settings;
 using static zFramework.TinyRPC.MessageManager;
-using static zFramework.TinyRPC.NormalMessageHandler;
 
 namespace zFramework.TinyRPC
 {
