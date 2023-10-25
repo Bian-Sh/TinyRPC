@@ -9,6 +9,7 @@ namespace zFramework.TinyRPC.Generated
         static void AutoRegistMessageHandler()
         {
             new NormalMessageHandler<TestMessage>();
+            new RpcMessageHandler<TestRPCRequest,TestRPCResponse>();
         }
     }
 }

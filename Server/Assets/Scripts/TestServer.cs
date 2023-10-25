@@ -5,7 +5,6 @@ using UnityEngine.UI;
 using zFramework.TinyRPC;
 using zFramework.TinyRPC.Generated;
 
-[MessageHandlerProvider]
 public class TestServer : MonoBehaviour
 {
     public int port = 8889;
@@ -13,6 +12,24 @@ public class TestServer : MonoBehaviour
     Session session;
     public Button button;
     public Button button2;
+
+    private void OnEnable()
+    {
+        this.AddNetworkSignal<TestRPCRequest, TestRPCResponse>(OnTestRequestRpcHandled);
+    }
+
+    private async Task OnTestRequestRpcHandled(Session session, TestRPCRequest request, TestRPCResponse response)
+    {
+        Debug.Log($"{nameof(TestServer)}: Receive {session} request {request}");
+        await Task.Delay(1000);
+        response.name = "response  from  tinyrpc server !";
+    }
+
+    private void OnDisable()
+    {
+        this.RemoveNetworkSignal<TestRPCRequest, TestRPCResponse>();
+    }
+
     private void Start()
     {
         button.onClick.AddListener(SendRPC);
@@ -78,20 +95,4 @@ public class TestServer : MonoBehaviour
     {
         server.Stop();
     }
-
-    #region Custom Handlers
-    [MessageHandler(MessageType.Normal)]
-    private static void MessageHandler(Session session, TestMessage message)
-    {
-        // todo 
-    }
-
-    [MessageHandler(MessageType.RPC)]
-    private static async Task RPCMessageHandler(Session session, TestRPCRequest request, TestRPCResponse response)
-    {
-        Debug.Log($"{nameof(TestServer)}: Receive {session} request {request}");
-        await Task.Delay(1000);
-        response.name = "response  from  tinyrpc server !";
-    }
-    #endregion
 }

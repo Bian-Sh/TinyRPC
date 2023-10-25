@@ -1,6 +1,7 @@
 using System;
+using zFramework.TinyRPC.Messages;
 
-namespace zFramework.TinyRPC.DataModel
+namespace zFramework.TinyRPC.Generated
 {
     [Serializable]
     public class S2C_Login : Response

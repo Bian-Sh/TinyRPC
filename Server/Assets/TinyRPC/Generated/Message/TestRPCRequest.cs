@@ -1,10 +1,13 @@
 ﻿using System;
 using zFramework.TinyRPC;
-using zFramework.TinyRPC.DataModel;
+using zFramework.TinyRPC.Messages;
 
-[Serializable]
+namespace zFramework.TinyRPC.Generated
+{
+    [Serializable]
     [ResponseType(typeof(TestRPCResponse))]
     public class TestRPCRequest : Request
     {
         public string name;
     }
+}
