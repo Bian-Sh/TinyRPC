@@ -77,7 +77,7 @@ namespace zFramework.TinyRPC
                 {
                     await session.ReceiveAsync();
                 }
-                catch (Exception e) when (e is not RpcTimeoutException || e is not RpcResponseException)
+                catch (Exception e) when (e is not RpcTimeoutException && e is not RpcResponseException)
                 {
                     Debug.LogError($"{nameof(TCPServer)}: Receive Error {e}");
                     HandleDisactiveSession(session);
@@ -153,7 +153,6 @@ namespace zFramework.TinyRPC
         #endregion
 
         #region Ping Message Handler
-        [MessageHandler(MessageType.RPC)]
         internal static async Task OnPingReceived(Session session, Ping request, Ping response)
         {
             response.Id = request.Id;

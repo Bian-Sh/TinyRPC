@@ -154,7 +154,7 @@ namespace zFramework.TinyRPC
                 {
                     await Session.ReceiveAsync();
                 }
-                catch (Exception e)
+                catch (Exception e)when (e is not RpcResponseException && e is not TimeoutException)
                 {
                     Debug.LogError($"{nameof(TinyClient)}: Receive Error {e}");
                     Stop();
