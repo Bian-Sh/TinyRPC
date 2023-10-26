@@ -4,16 +4,11 @@ using UnityEngine;
 namespace zFramework.TinyRPC.Messages
 {
     [Serializable]
-    public class Message:IMessage
+    public class Message : IMessage
     {
-        /// <summary>
-        /// 消息 id , 系统中自增，用于消息身份识别
-        /// </summary>
-        public int id;
-
+        readonly NotImplementedException exception = new("Normal message do not provide id");
         /// <inheritdoc/>
-        public int Id { get => id; set => id = value; }
-
+        public int Id { get => throw exception; set => throw exception; }
         public override string ToString()
         {
             return JsonUtility.ToJson(this);
