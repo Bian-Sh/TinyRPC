@@ -13,23 +13,6 @@ public class TestServer : MonoBehaviour
     public Button button;
     public Button button2;
 
-    private void OnEnable()
-    {
-        this.AddNetworkSignal<TestRPCRequest, TestRPCResponse>(OnTestRequestRpcHandled);
-    }
-
-    private async Task OnTestRequestRpcHandled(Session session, TestRPCRequest request, TestRPCResponse response)
-    {
-        Debug.Log($"{nameof(TestServer)}: Receive {session} request {request}");
-        await Task.Delay(1000);
-        response.name = "response  from  tinyrpc server !";
-    }
-
-    private void OnDisable()
-    {
-        this.RemoveNetworkSignal<TestRPCRequest, TestRPCResponse>();
-    }
-
     private void Start()
     {
         button.onClick.AddListener(SendRPC);
