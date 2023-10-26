@@ -1,13 +1,11 @@
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.UI;
 using zFramework.TinyRPC.Generated;
 
 namespace zFramework.TinyRPC.Samples
 {
-    [MessageHandlerProvider]
     public class TestClient : MonoBehaviour
     {
         #region UI Component
@@ -84,10 +82,8 @@ namespace zFramework.TinyRPC.Samples
             var delay = Task.Delay(3000).ContinueWith(v => false);
             var task = client.ConnectAsync();
             bool[] result = await Task.WhenAll(delay, task);
-            Debug.Log($"{nameof(TestClient)}: result1 {result[0]} , result2{result[1]}");
             //3. 取消登录中...的显示
             tcs.Cancel();
-            Debug.Log($"{nameof(TestClient)}:  Thread id = {Thread.CurrentThread.ManagedThreadId}");
             if (result[1])
             {
                 //4. 转换 connect 字样为 disconnect
@@ -155,13 +151,5 @@ namespace zFramework.TinyRPC.Samples
         }
         #endregion
 
-
-        [MessageHandler(MessageType.RPC)]
-        private static async Task RPCMessageHandler(Session session, TestRPCRequest request, TestRPCResponse response)
-        {
-            Debug.Log($"{nameof(TestClient)}: Receive {session} request {request}");
-            await Task.Delay(500);
-            response.name = "response  from  tinyrpc client !";
-        }
     }
 }
