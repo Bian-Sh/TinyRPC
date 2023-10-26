@@ -2,19 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using zFramework.TinyRPC.Messages;
-using static zFramework.TinyRPC.MessageManager;
 
 namespace zFramework.TinyRPC
 {
     public class NormalMessageHandler<T> : INormalMessageHandler where T : IMessage
     {
         readonly List<HandlerInfo> handlerInfos = new();
-        /// <summary>
-        ///  实例化时自动注册到 normal handlers
-        /// </summary>
-        /// <exception cref="ArgumentException">如果已经存在相同类型的 handler</exception>
-        public NormalMessageHandler() => NormalMessageHandlers.Add(typeof(T), this);
-
         public  void Invoke(Session session, IMessage message)
         {
             if (message is T t)

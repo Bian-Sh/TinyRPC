@@ -4,16 +4,20 @@ using UnityEngine;
 using zFramework.TinyRPC.Messages;
 namespace zFramework.TinyRPC
 {
-    using static MessageManager;
     public class RpcMessageHandler<Request, Response> : IRpcMessageHandler where Request : IRequest where Response : IResponse
     {
         Func<Session, Request, Response, Task> task; // can only be set once
-        /// <summary>
-        ///  实例化时自动注册到 rpc handlers
-        /// </summary>
-        /// <exception cref="ArgumentException">如果已经存在相同类型的 handler</exception>
-        public RpcMessageHandler() => RpcMessageHandlers.Add(typeof(Request), this);
-        public Task Invoke(Session session, IRequest request, IResponse response) => task?.Invoke(session, (Request)request, (Response)response) ?? Task.CompletedTask;
+
+        public Task Invoke(Session session, IRequest request, IResponse response)
+        {
+            if (task == null)
+            {
+                Debug.LogError($"{nameof(RpcMessageHandler<Request, Response>)}: RPC Task not found, info = {this}");
+                return Task.CompletedTask;
+            }
+            return task.Invoke(session, (Request)request, (Response)response);
+        }
+
         public void AddTask(Func<Session, Request, Response, Task> task)
         {
             if (this.task != null)
@@ -23,7 +27,18 @@ namespace zFramework.TinyRPC
             }
             this.task = task;
         }
-        public void RemoveTask() => task = null;
+        public void RemoveTask(Func<Session, Request, Response, Task> task)
+        {
+            if (this.task != null && this.task == task)
+            {
+                task = null;
+            }
+            else
+            {
+                Debug.LogWarning($"{nameof(RpcMessageHandler<Request, Response>)}: RPC Task not found or registed, info = {this}");
+            }
+        }
+
         public override string ToString() => $"RpcMessageHandler<{typeof(Request)},{typeof(Response)}>";
     }
 }

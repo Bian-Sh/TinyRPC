@@ -18,11 +18,12 @@ namespace zFramework.TinyRPC.Messages
 
         public void OnAfterDeserialize()
         {
-            if (type != "zFramework.TinyRPC.Ping")
+            var asmname = type switch
             {
-                Debug.Log($"MessageWrapper.OnAfterDeserialize: type = {type}, data = {data}");
-            }
-            var asmname = type == "zFramework.TinyRPC.Ping" ? "com.zframework.tinyrpc.runtime" : "com.zframework.tinyrpc.generated";
+                "zFramework.TinyRPC.Ping" => "com.zframework.tinyrpc.runtime", // ping asm
+                "zFramework.TinyRPC.Messages.Response" => "com.zframework.tinyrpc.runtime", // fallback response asm
+                _ => "com.zframework.tinyrpc.generated"
+            };
             var asm = Assembly.Load(asmname);
             Type t = asm.GetType(type);
             Message = (IMessage)JsonUtility.FromJson(data, t);

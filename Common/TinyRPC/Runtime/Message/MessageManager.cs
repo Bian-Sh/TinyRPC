@@ -27,12 +27,44 @@ namespace zFramework.TinyRPC
         public static void Awake()
         {
             // add ping message and its handler internal 
+            RegistPingMessageAndHandlerInternal();
+            // regist rpc message pairs must before RegistGeneratedMessageHandlers
+            RegistRPCMessagePairs();
+            RegistGeneratedMessageHandlers();
+        }
+
+        private static void RegistPingMessageAndHandlerInternal()
+        {
             rpcMessagePairs.Add(typeof(Ping), typeof(Ping));
             var handler = new RpcMessageHandler<Ping, Ping>();
             handler.AddTask(TCPServer.OnPingReceived);
+            RpcMessageHandlers.Add(typeof(Ping), handler);
+        }
 
-            RegistRPCMessagePairs();
-            Debug.Log($"{nameof(MessageManager)}: TinyRPC Awake ~");
+        // 注册所有位于 “com.zframework.tinyrpc.generated” 程序集下的消息处理器
+        private static void RegistGeneratedMessageHandlers()
+        {
+            // regist rpc message handlers
+            var types = Assembly.Load("com.zframework.tinyrpc.generated")
+                .GetTypes()
+                .Where(type => type.IsSubclassOf(typeof(Request)));
+            // use reflection to regist rpc message handlers
+            foreach (var type in types)
+            {
+                var handler = Activator.CreateInstance(typeof(RpcMessageHandler<,>).MakeGenericType(type, GetResponseType(type))) as IRpcMessageHandler;
+                RpcMessageHandlers.Add(type, handler);
+            }
+
+            // regist normal message handlers
+            types = Assembly.Load("com.zframework.tinyrpc.generated")
+                .GetTypes()
+                .Where(type => type.IsSubclassOf(typeof(Message)));
+            // use reflection to regist normal message handlers
+            foreach (var type in types)
+            {
+                var handler = Activator.CreateInstance(typeof(NormalMessageHandler<>).MakeGenericType(type)) as INormalMessageHandler;
+                NormalMessageHandlers.Add(type, handler);
+            }
         }
 
         public static void RegistRPCMessagePairs()
@@ -63,18 +95,7 @@ namespace zFramework.TinyRPC
             {
                 Debug.LogError($"{nameof(MessageManager)}: 请保证 生成的网络消息在 “com.zframework.tinyrpc.generated” 程序集下");
             }
-            // for log only
-            foreach (var item in rpcMessagePairs)
-            {
-                Debug.Log($"{nameof(MessageManager)}: RPC Pair Added , request = {item.Key.Name}, response = {item.Value.Name}");
-            }
         }
-        private static void RegisterRpcMessageHandler(Type type, RpcMessageHandler<Request, Response> handler)
-        {
-            RpcMessageHandlers.Add(type, handler);
-        }
-
-
 
         internal static void HandleNormalMessage(Session session, IMessage message)
         {
@@ -102,20 +123,24 @@ namespace zFramework.TinyRPC
                 }
                 else
                 {
+                    var error = $"RPC 消息 {request.GetType().Name} 没有找到对应的 Response 类型！";
                     response = new Response
                     {
                         Id = request.Id,
-                        Error = $"RPC 消息 {request.GetType().Name} 没有找到对应的 Response 类型！"
+                        Error = error
                     };
+                    Debug.LogWarning($"{nameof(MessageManager)}: {error}");
                 }
             }
             else
             {
+                var error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！";
                 response = new Response
                 {
                     Id = request.Id,
-                    Error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！"
+                    Error = error
                 };
+                Debug.LogWarning($"{nameof(MessageManager)}: {error}");
             }
             session.Reply(response);
         }
@@ -166,6 +191,18 @@ namespace zFramework.TinyRPC
         public static Type GetResponseType([NotNull] IRequest request)
         {
             if (!rpcMessagePairs.TryGetValue(request.GetType(), out var type))
+            {
+                throw new Exception($"RPC 消息  Request-Response 为正确完成映射，请参考示例正确注册映射关系！");
+            }
+            return type;
+        }
+        public static Type GetResponseType(Type request)
+        {
+            if (!request.IsSubclassOf(typeof(Request)) && request != typeof(Ping))
+            {
+                throw new ArgumentException($"指定的参数必须是 Request 的子类！");
+            }
+            if (!rpcMessagePairs.TryGetValue(request, out var type))
             {
                 throw new Exception($"RPC 消息  Request-Response 为正确完成映射，请参考示例正确注册映射关系！");
             }
