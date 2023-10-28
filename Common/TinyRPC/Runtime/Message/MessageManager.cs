@@ -44,23 +44,21 @@ namespace zFramework.TinyRPC
         // 注册所有位于 “com.zframework.tinyrpc.generated” 程序集下的消息处理器
         private static void RegistGeneratedMessageHandlers()
         {
-            // regist rpc message handlers
             var types = Assembly.Load("com.zframework.tinyrpc.generated")
-                .GetTypes()
-                .Where(type => type.IsSubclassOf(typeof(Request)));
+                .GetTypes();
+
             // use reflection to regist rpc message handlers
-            foreach (var type in types)
+            var requests = types.Where(type => type.IsSubclassOf(typeof(Request)));
+            foreach (var type in requests)
             {
-                var handler = Activator.CreateInstance(typeof(RpcMessageHandler<,>).MakeGenericType(type, GetResponseType(type))) as IRpcMessageHandler;
+                var handler = Activator.CreateInstance(typeof(RpcMessageHandler<,>)
+                    .MakeGenericType(type, GetResponseType(type))) as IRpcMessageHandler;
                 RpcMessageHandlers.Add(type, handler);
             }
 
-            // regist normal message handlers
-            types = Assembly.Load("com.zframework.tinyrpc.generated")
-                .GetTypes()
-                .Where(type => type.IsSubclassOf(typeof(Message)));
             // use reflection to regist normal message handlers
-            foreach (var type in types)
+            var messages = types.Where(type => type.IsSubclassOf(typeof(Message)));
+            foreach (var type in messages)
             {
                 var handler = Activator.CreateInstance(typeof(NormalMessageHandler<>).MakeGenericType(type)) as INormalMessageHandler;
                 NormalMessageHandlers.Add(type, handler);
