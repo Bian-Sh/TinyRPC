@@ -9,6 +9,7 @@ namespace zFramework.TinyRPC.Samples
     public class TestClient : MonoBehaviour
     {
         #region UI Component
+        public InputField ip;
         public Button connect;
         public Button sendrpc;
         public Button sendNormalMessage;
@@ -21,6 +22,8 @@ namespace zFramework.TinyRPC.Samples
         #region MonoBehaviour Func
         private void Start()
         {
+            ip.text = PlayerPrefs.GetString("ip", "127.0.0.1");
+            ip.onEndEdit.AddListener(v => PlayerPrefs.SetString("ip", v));
             connect.onClick.AddListener(OnConnectedButtonClicked);
             sendrpc.onClick.AddListener(SendRPCAsync);
             sendNormalMessage.onClick.AddListener(SendNormalMessage);
@@ -60,7 +63,7 @@ namespace zFramework.TinyRPC.Samples
             else
             {
                 // 1. 构建客户端
-                client = new TinyClient("localhost", port);
+                client = new TinyClient(ip.text, port);
                 // 2. 注册 Client 事件
                 client.OnClientEstablished += OnClientEstablished;
                 client.OnClientDisconnected += OnClientDisconnected;
