@@ -13,6 +13,7 @@ namespace zFramework.TinyRPC
             if (task == null)
             {
                 Debug.LogError($"{nameof(RpcMessageHandler<Request, Response>)}: RPC Task not found, info = {this}");
+                response.Error= $"RPC Task not found, info = {this}";
                 return Task.CompletedTask;
             }
             return task.Invoke(session, (Request)request, (Response)response);
