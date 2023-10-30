@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -13,6 +14,8 @@ namespace zFramework.TinyRPC.Samples
         public Button connect;
         public Button sendrpc;
         public Button sendNormalMessage;
+        public Button sendAttributeMarkedNormalMessage;
+        public Button sendAttributeMarkedRPCMessage;
         public Text ping;
         #endregion
 
@@ -27,24 +30,8 @@ namespace zFramework.TinyRPC.Samples
             connect.onClick.AddListener(OnConnectedButtonClicked);
             sendrpc.onClick.AddListener(SendRPCAsync);
             sendNormalMessage.onClick.AddListener(SendNormalMessage);
-        }
-
-        private void SendNormalMessage()
-        {
-            if (client != null && client.IsConnected)
-            {
-                var message = new TestMessage
-                {
-                    message = "normal message from tinyrpc client",
-                    age = 999
-                };
-                Debug.Log($"{nameof(TestClient)}: Send Test Message ！{message}");
-                client.Send(message);
-            }
-            else
-            {
-                Debug.LogWarning($"{nameof(TestClient)}: Please Connect Server First！");
-            }
+            sendAttributeMarkedNormalMessage.onClick.AddListener(SendAttributeMarkedNormalMessage);
+            sendAttributeMarkedRPCMessage.onClick.AddListener(SendAttributeMarkedRPCMessage);
         }
 
         private void OnApplicationQuit() => client?.Stop();
@@ -110,6 +97,63 @@ namespace zFramework.TinyRPC.Samples
                 Debug.Log($"{nameof(TestClient)}: Send Test RPC Request ！");
                 var response = await client.Call<TestRPCResponse>(request);
                 Debug.Log($"{nameof(TestClient)}: Receive RPC Response ：{response.name}  , cost = {Time.realtimeSinceStartup - time}");
+            }
+            else
+            {
+                Debug.LogWarning($"{nameof(TestClient)}: Please Connect Server First！");
+            }
+        }
+        private async void SendAttributeMarkedRPCMessage()
+        {
+            // c2s_login 's handler is registered in server by [MessageHandler(MessageType.RPC)] attribute 
+            // this logic is aimed to test the attribute marked rpc message , to see whether it can be sent and received correctly
+            if (client != null && client.IsConnected)
+            {
+                var request = new C2S_Login
+                {
+                    name = "request from tinyrpc client",
+                    password = "123456"
+                };
+                var cachedtime = Time.realtimeSinceStartup;
+                var response = await client.Call<S2C_Login>(request);
+                var cost = Time.realtimeSinceStartup - cachedtime;
+                Debug.Log($"{nameof(TestClient)}: Attrubute Marked RPC Message Test ！");
+                Debug.Log($"{nameof(TestClient)}: Receive RPC Response ：cost = {cost} , response = {response}  ");
+            }
+            else
+            {
+                Debug.LogWarning($"{nameof(TestClient)}: Please Connect Server First！");
+            }
+        }
+
+        private void SendAttributeMarkedNormalMessage()
+        {
+            if (client != null && client.IsConnected)
+            {
+                var message = new AttributeRegistTestMessage
+                {
+                    desc = "normal message from tinyrpc client",
+                };
+                Debug.Log($"{nameof(TestClient)}: Send Test Message ！{message}");
+                client.Send(message);
+            }
+            else
+            {
+                Debug.LogWarning($"{nameof(TestClient)}: Please Connect Server First！");
+            }
+        }
+
+        private void SendNormalMessage()
+        {
+            if (client != null && client.IsConnected)
+            {
+                var message = new TestMessage
+                {
+                    message = "normal message from tinyrpc client",
+                    age = 999
+                };
+                Debug.Log($"{nameof(TestClient)}: Send Test Message ！{message}");
+                client.Send(message);
             }
             else
             {
