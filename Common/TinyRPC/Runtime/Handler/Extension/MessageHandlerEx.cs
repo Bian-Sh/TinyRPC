@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC.Messages;
@@ -48,6 +49,16 @@ namespace zFramework.TinyRPC
         {
             if (NormalMessageHandlers.TryGetValue(typeof(T), out var handler))
             {
+#if UNITY_EDITOR
+                // we should validate the task here , the task need to be added into handler must not marked with MessageHandlerAttribute as it will be added by reference later !
+                // as RuntimeInitializeOnLoadMethod is more earlier  then This API, so I validate task  here,  error occurs in editor mode only.
+                var method = task.Method;
+                var attr = method.GetCustomAttribute<MessageHandlerAttribute>();
+                if (attr != null)
+                {
+                    throw new ArgumentException($" {method.DeclaringType}.{method.Name} 注册失败，该方法已经被 {attr} 标记，请不要重复注册！");
+                }
+#endif
                 (handler as NormalMessageHandler<T>).AddTask(task, priority);
             }
             else
@@ -71,6 +82,16 @@ namespace zFramework.TinyRPC
         {
             if (RpcMessageHandlers.TryGetValue(typeof(Request), out var handler))
             {
+#if UNITY_EDITOR
+                // we should validate the task here , the task want to be added must not marked with MessageHandlerAttribute as it will be added by reference later !
+                // as RuntimeInitializeOnLoadMethod is more earlier  then This API, so I validate task  here,  error occurs in editor mode only.
+                var method = task.Method;
+                var attr = method.GetCustomAttribute<MessageHandlerAttribute>();
+                if (attr != null)
+                {
+                    throw new ArgumentException($" {method.DeclaringType}.{method.Name} 注册失败，该方法已经被 {attr} 标记，请不要重复注册！");
+                }
+#endif
                 (handler as RpcMessageHandler<Request, Response>).AddTask(task);
             }
             else

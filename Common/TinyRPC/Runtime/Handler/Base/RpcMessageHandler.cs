@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC.Messages;
@@ -13,7 +14,7 @@ namespace zFramework.TinyRPC
             if (task == null)
             {
                 Debug.LogError($"{nameof(RpcMessageHandler<Request, Response>)}: RPC Task not found, info = {this}");
-                response.Error= $"RPC Task not found, info = {this}";
+                response.Error = $"RPC Task not found, info = {this}";
                 return Task.CompletedTask;
             }
             return task.Invoke(session, (Request)request, (Response)response);
@@ -28,6 +29,20 @@ namespace zFramework.TinyRPC
             }
             this.task = task;
         }
+
+        // this is used for interface based RPC task regist
+        public void AddTask(MethodInfo method)
+        {
+            if (this.task != null)
+            {
+                Debug.LogWarning($"{nameof(RpcMessageHandler<Request, Response>)}: RPC Task already exists, info = {this}");
+                return;
+            }
+            // 使用反射将参数 task 转为泛型 task
+            var genericTask = Delegate.CreateDelegate(typeof(Func<Session, Request, Response, Task>), method);
+            this.task = genericTask as Func<Session, Request, Response, Task>;
+        }
+
         public void RemoveTask(Func<Session, Request, Response, Task> task)
         {
             if (this.task != null && this.task == task)
