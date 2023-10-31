@@ -9,7 +9,7 @@ namespace zFramework.TinyRPC
     public class NormalMessageHandler<T> : INormalMessageHandler where T : IMessage
     {
         readonly List<HandlerInfo> handlerInfos = new();
-        public void Invoke(Session session, IMessage message)
+        public void Dispatch(Session session, IMessage message)
         {
             if (message is T t)
             {
@@ -43,7 +43,8 @@ namespace zFramework.TinyRPC
             handlerInfos.Sort((a, b) => b.priority - a.priority);
         }
 
-        public void AddTask(MethodInfo method, int priority)
+        ///  <inheritdoc/>
+        public void Bind(MethodInfo method, int priority)
         {
             var genericTask = Delegate.CreateDelegate(typeof(Action<Session, T>), method);
             handlerInfos.Add(new HandlerInfo { task = genericTask as Action<Session, T>, priority = priority });

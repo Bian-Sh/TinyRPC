@@ -1,3 +1,4 @@
+#pragma warning disable IDE0060 // 删除未使用的参数
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -5,7 +6,7 @@ using UnityEngine;
 using zFramework.TinyRPC.Messages;
 namespace zFramework.TinyRPC
 {
-    using static MessageManager;
+    using static Manager;
     public static class MessageHandlerEx
     {
         #region For Monobehaviour
@@ -114,3 +115,4 @@ namespace zFramework.TinyRPC
         #endregion
     }
 }
+#pragma warning restore IDE0060 // 删除未使用的参数

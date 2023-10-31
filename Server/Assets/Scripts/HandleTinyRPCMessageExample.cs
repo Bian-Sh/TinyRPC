@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC;
 using zFramework.TinyRPC.Generated;
-using static zFramework.TinyRPC.MessageManager;
 
 public class HandleTinyRPCMessageExample : MonoBehaviour
 {
@@ -35,9 +34,7 @@ public class HandleTinyRPCMessageExample : MonoBehaviour
     [Button]
     public static void RegistHandlerTask()
     {
-        RegistRPCMessagePairs();
-        RegistGeneratedMessageHandlers();
-        RegistAttributeMarkedHandlerTask();
+
     }
 
 }

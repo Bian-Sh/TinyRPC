@@ -8,7 +8,7 @@ using zFramework.TinyRPC.Generated;
 public class TestServer : MonoBehaviour
 {
     public int port = 8889;
-    TCPServer server;
+    TinyServer server;
     Session session;
     public Button button;
     public Button button2;
@@ -18,7 +18,7 @@ public class TestServer : MonoBehaviour
         button.onClick.AddListener(SendRPC);
         button2.onClick.AddListener(SendNormalMessage);
 
-        server = new TCPServer(port);
+        server = new TinyServer(port);
         server.OnClientEstablished += Server_OnClientEstablished;
         server.OnClientDisconnected += Server_OnClientDisconnected;
         server.Start();

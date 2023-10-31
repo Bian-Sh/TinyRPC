@@ -7,7 +7,7 @@ using UnityEngine;
 using zFramework.TinyRPC.Messages;
 using zFramework.TinyRPC.Exceptions;
 using zFramework.TinyRPC.Settings;
-using static zFramework.TinyRPC.MessageManager;
+using static zFramework.TinyRPC.Manager;
 
 namespace zFramework.TinyRPC
 {
@@ -142,28 +142,22 @@ namespace zFramework.TinyRPC
             switch (type)
             {
                 case 0: //normal message
-                    {
-                        HandleNormalMessage(this, message);
-                    }
+                    HandleMessage(this, message);
                     break;
                 case 1: // rpc message
+                    if (message is Request || (message is Ping && IsServerSide))
                     {
-                        if (message is Request || (message is Ping && IsServerSide))
-                        {
-                            HandleRpcRequest(this, message as IRequest);
-                        }
-                        else if (message is Response || (message is Ping && !IsServerSide))
-                        {
-                            HandleRpcResponse(this, message as IResponse);
-                        }
+                        HandleRequest(this, message as IRequest);
+                    }
+                    else if (message is Response || (message is Ping && !IsServerSide))
+                    {
+                        HandleResponse(message as IResponse);
                     }
                     break;
-                    // todo : 大文件上传？
                 default:
                     break;
             }
         }
-
         public override string ToString() => $"Session: {IPEndPoint}  IsServer:{IsServerSide}";
         public void Close()
         {

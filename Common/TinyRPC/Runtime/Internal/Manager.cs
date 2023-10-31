@@ -17,7 +17,7 @@ namespace zFramework.TinyRPC
     // 2. 通过 UnityEngine.Component 扩展方法 AddNetworkSignal  注册
     //
     // 约定 MessageHandlerAttribute 只能出现在静态方法上
-    public static class MessageManager
+    public static class Manager
     {
         internal static readonly Dictionary<Type, INormalMessageHandler> NormalMessageHandlers = new();
         internal static readonly Dictionary<Type, IRpcMessageHandler> RpcMessageHandlers = new();
@@ -27,11 +27,9 @@ namespace zFramework.TinyRPC
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
         public static void Awake()
         {
-            // add ping message and its handler internal 
-            RegistPingMessageAndHandlerInternal();
             // regist rpc message pairs must before RegistGeneratedMessageHandlers
             RegistRPCMessagePairs();
-            RegistGeneratedMessageHandlers();
+            RegistMessageHandlers();
             // if user has regist attribute marked handler task , then regist them
             RegistAttributeMarkedHandlerTask();
         }
@@ -43,8 +41,11 @@ namespace zFramework.TinyRPC
                 .SelectMany(v => v.GetTypes())
                 .Where(v => v.GetCustomAttribute<MessageHandlerProviderAttribute>() != null);
 
-            // log all types ，count + string.join('\n'
-            Debug.Log($"{nameof(MessageManager)}: {types.Count()} 个消息处理器提供者被注册，分别是：\n{string.Join("\n", types.Select(v => v.Name))}");
+            if (types.Count() == 0)
+            {
+                return;
+            }
+            Debug.Log($"{nameof(Manager)}: {types.Count()} 个消息处理器提供者被注册，分别是：\n{string.Join("\n", types.Select(v => v.Name))}");
 
             foreach (var handlerProvider in types)
             {
@@ -63,44 +64,43 @@ namespace zFramework.TinyRPC
                             var session = parameters[0];
                             if (session.ParameterType != typeof(Session))
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 第一个参数必须是 Session 类型！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 第一个参数必须是 Session 类型！");
                                 continue;
                             }
                             var request = parameters[1];
                             if (!request.ParameterType.IsSubclassOf(typeof(Request)))
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 第二个参数必须是 Request 类型！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 第二个参数必须是 Request 类型！");
                                 continue;
                             }
                             var response = parameters[2];
                             if (!response.ParameterType.IsSubclassOf(typeof(Response)))
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 第三个参数必须是 Response 类型！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 第三个参数必须是 Response 类型！");
                                 continue;
                             }
                             // check response type is match request type
                             var responseType = GetResponseType(request.ParameterType);
                             if (responseType != response.ParameterType)
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name}  响应类型是{response.Name},但期望值是 {responseType.Name}！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name}  响应类型是{response.Name},但期望值是 {responseType.Name}！");
                                 continue;
                             }
                             // check return type is Task
                             if (method.ReturnType != typeof(Task))
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name}  必须返回 Task 类型！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name}  必须返回 Task 类型！");
                                 continue;
                             }
                             // now get the specify handler with request type
                             var handler = RpcMessageHandlers[request.ParameterType];
                             // add this method to handler directly
-                            handler.AddTask(method);
-                            //LOG 完成了对 xxx 的任务的注册
-                            Debug.Log($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} RPC 消息处理器处理逻辑注册成功！");
+                            handler.Bind(method);
+                            Debug.Log($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} RPC 消息处理器处理逻辑注册成功！");
                         }
                         else
                         {
-                            Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 至少有 2 个参数！");
+                            Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 至少有 2 个参数！");
                         }
                     }
                     else if (attr.type == MessageType.Normal)
@@ -112,48 +112,49 @@ namespace zFramework.TinyRPC
                             var session = parameters[0];
                             if (session.ParameterType != typeof(Session))
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 第一个参数必须是 Session 类型！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 第一个参数必须是 Session 类型！");
                                 continue;
                             }
                             var message = parameters[1];
                             if (!message.ParameterType.IsSubclassOf(typeof(Message)))
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 第二个参数必须是 Message 类型！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 第二个参数必须是 Message 类型！");
                                 continue;
                             }
                             // check return type is void
                             if (method.ReturnType != typeof(void))
                             {
-                                Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name}  必须返回 void 类型！");
+                                Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name}  必须返回 void 类型！");
                                 continue;
                             }
                             // now get the specify handler with request type
                             var handler = NormalMessageHandlers[message.ParameterType];
                             // add this method to handler directly
-                            handler.AddTask(method, attr.priority);
-                            //LOG 完成了对 xxx 的任务的注册
-                            Debug.Log($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 消息处理器处理逻辑注册成功！");
+                            handler.Bind(method, attr.priority);
+                            Debug.Log($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 消息处理器处理逻辑注册成功！");
                         }
                         else
                         {
-                            Debug.LogError($"{nameof(MessageManager)}: {handlerProvider.Name}.{method.Name} 至少有 2 个参数！");
+                            Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 至少有 2 个参数！");
                         }
                     }
                 }
             }
         }
 
-        private static void RegistPingMessageAndHandlerInternal()
+        /// <summary>
+        /// 根据 generated  的消息和 内置的 Ping消息，注册消息处理器实例
+        /// </summary>
+        public static void RegistMessageHandlers()
         {
-            rpcMessagePairs.Add(typeof(Ping), typeof(Ping));
-            var handler = new RpcMessageHandler<Ping, Ping>();
-            handler.AddTask(TCPServer.OnPingReceived);
-            RpcMessageHandlers.Add(typeof(Ping), handler);
-        }
+            //Clean message pairs each time, allowing for multiple calls to this API, suitable for hotfix usage scenarios.
+            NormalMessageHandlers.Clear();
+            RpcMessageHandlers.Clear();
+            // regist internal ping handler
+            var pingHandler = new RpcMessageHandler<Ping, Ping>();
+            pingHandler.AddTask(TinyServer.OnPingReceived);
+            RpcMessageHandlers.Add(typeof(Ping), pingHandler);
 
-        // 注册所有位于 “com.zframework.tinyrpc.generated” 程序集下的消息处理器
-        public static void RegistGeneratedMessageHandlers()
-        {
             var types = Assembly.Load("com.zframework.tinyrpc.generated")
                 .GetTypes();
 
@@ -169,7 +170,7 @@ namespace zFramework.TinyRPC
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"{nameof(MessageManager)}: RPC 消息对 {type.Name} - {GetResponseType(type).Name} 注册失败， {e} ");
+                    Debug.LogWarning($"{nameof(Manager)}: RPC 消息对 {type.Name} - {GetResponseType(type).Name} 注册失败， {e} ");
                 }
             }
 
@@ -184,13 +185,18 @@ namespace zFramework.TinyRPC
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"{nameof(MessageManager)}: 消息 {type.Name} 注册失败， {e} ");
+                    Debug.LogWarning($"{nameof(Manager)}: 消息 {type.Name} 注册失败， {e} ");
                 }
             }
         }
 
         public static void RegistRPCMessagePairs()
         {
+            //Clean message pairs each time, allowing for multiple calls to this API, suitable for hotfix usage scenarios.
+            rpcMessagePairs.Clear();
+            // regist internal ping message 
+            rpcMessagePairs.Add(typeof(Ping), typeof(Ping));
+
             var assembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(v => v.FullName.StartsWith("com.zframework.tinyrpc.generated"));
 
@@ -210,35 +216,35 @@ namespace zFramework.TinyRPC
                             }
                             catch (Exception e)
                             {
-                                Debug.LogWarning($"{nameof(MessageManager)}: RPC 消息对 {type.Name} - {attr.Type} 注册失败， {e} ");
+                                Debug.LogWarning($"{nameof(Manager)}: RPC 消息对 {type.Name} - {attr.Type} 注册失败， {e} ");
                             }
                         }
                         else
                         {
-                            Debug.LogError($"{nameof(MessageManager)}: 请务必为 {type.Name} 通过 ResponseTypeAttribute 配置 Response 消息！");
+                            Debug.LogError($"{nameof(Manager)}: 请务必为 {type.Name} 通过 ResponseTypeAttribute 配置 Response 消息！");
                         }
                     }
                 }
             }
             else
             {
-                Debug.LogError($"{nameof(MessageManager)}: 请保证 生成的网络消息在 “com.zframework.tinyrpc.generated” 程序集下");
+                Debug.LogError($"{nameof(Manager)}: 请保证 生成的网络消息在 “com.zframework.tinyrpc.generated” 程序集下");
             }
         }
 
-        internal static void HandleNormalMessage(Session session, IMessage message)
+        internal static void HandleMessage(Session session, IMessage message)
         {
             if (NormalMessageHandlers.TryGetValue(message.GetType(), out var handler))
             {
-                handler.Invoke(session, message);
+                handler.Dispatch(session, message);
             }
             else
             {
-                Debug.LogWarning($"{nameof(MessageManager)}: no handler for message type {message.GetType()}");
+                Debug.LogWarning($"{nameof(Manager)}: no handler for message type {message.GetType()}");
             }
         }
 
-        internal static async void HandleRpcRequest(Session session, IRequest request)
+        internal static async void HandleRequest(Session session, IRequest request)
         {
             var type = request.GetType();
             IResponse response;
@@ -248,7 +254,7 @@ namespace zFramework.TinyRPC
                 {
                     response = Activator.CreateInstance(responseType) as IResponse;
                     response.Id = request.Id;
-                    await handler.Invoke(session, request, response);
+                    await handler.Dispatch(session, request, response);
                 }
                 else
                 {
@@ -258,7 +264,7 @@ namespace zFramework.TinyRPC
                         Id = request.Id,
                         Error = error
                     };
-                    Debug.LogWarning($"{nameof(MessageManager)}: {error}");
+                    Debug.LogWarning($"{nameof(Manager)}: {error}");
                 }
             }
             else
@@ -269,11 +275,11 @@ namespace zFramework.TinyRPC
                     Id = request.Id,
                     Error = error
                 };
-                Debug.LogWarning($"{nameof(MessageManager)}: {error}");
+                Debug.LogWarning($"{nameof(Manager)}: {error}");
             }
             session.Reply(response);
         }
-        internal static void HandleRpcResponse(Session session, IResponse response)
+        internal static void HandleResponse(IResponse response)
         {
             if (rpcInfoPairs.TryGetValue(response.Id, out var rpcInfo))
             {

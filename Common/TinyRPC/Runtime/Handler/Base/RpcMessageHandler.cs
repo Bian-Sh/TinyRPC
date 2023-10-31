@@ -9,7 +9,7 @@ namespace zFramework.TinyRPC
     {
         Func<Session, Request, Response, Task> task; // can only be set once
 
-        public Task Invoke(Session session, IRequest request, IResponse response)
+        public Task Dispatch(Session session, IRequest request, IResponse response)
         {
             if (task == null)
             {
@@ -30,8 +30,8 @@ namespace zFramework.TinyRPC
             this.task = task;
         }
 
-        // this is used for interface based RPC task regist
-        public void AddTask(MethodInfo method)
+        /// <inheritdoc/>
+        public void Bind(MethodInfo method)
         {
             if (this.task != null)
             {

@@ -16,12 +16,12 @@ namespace zFramework.TinyRPC
     // 事件：当握手完成，当用户断线 、当服务器断线
     // 消息结构：size + body（type+content） 4 + 1 + body , type =  0 代表 ping , 1 代表常规 message ， 2 代表 rpc message
     // 会话：Session = TcpClient + lastSendTime + lastReceiveTime 
-    public class TCPServer
+    public class TinyServer
     {
         public event Action<Session> OnClientEstablished;
         public event Action<Session> OnClientDisconnected;
         public event Action<string> OnServerClosed;
-        public TCPServer(int port)
+        public TinyServer(int port)
         {
             context = SynchronizationContext.Current;
             listener = new TcpListener(IPAddress.Any, port);
@@ -79,7 +79,7 @@ namespace zFramework.TinyRPC
                 }
                 catch (Exception e) when (e is not RpcTimeoutException && e is not RpcResponseException)
                 {
-                    Debug.LogError($"{nameof(TCPServer)}: Receive Error {e}");
+                    Debug.LogError($"{nameof(TinyServer)}: Receive Error {e}");
                     HandleDisactiveSession(session);
                     break;
                 }
@@ -142,7 +142,7 @@ namespace zFramework.TinyRPC
         #region Assistant Function
         private void HandleDisactiveSession(Session session)
         {
-            Debug.Log($"{nameof(TCPServer)}:  Session is disconnected! \n{session}");
+            Debug.Log($"{nameof(TinyServer)}:  Session is disconnected! \n{session}");
             session.Close();
             lock (sessions)
             {
