@@ -14,6 +14,7 @@ namespace zFramework.TinyRPC.Settings
 
         //filter log message, default is Ping (must use full type name here)
         public List<string> LogFilters = new() { "zFramework.TinyRPC.Ping" };
+        [Header("PostProcessor 开启log")]
         public bool logEnabled;
 
 
