@@ -13,6 +13,7 @@
     "com.unity.visualscripting": "1.7.8",
     "com.yasirkula.ingamedebugconsole": "file:./../../Common/UnityIngameDebugConsole",
     "com.zframework.tinyrpc": "file:./../../Common/TinyRPC",
+    "com.zframework.tinyrpc.generated": "file:./../../Common/TinyRPC Generated Message",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.animation": "1.0.0",

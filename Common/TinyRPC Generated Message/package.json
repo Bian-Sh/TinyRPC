@@ -1,0 +1,17 @@
+{
+  "name": "com.zframework.tinyrpc.generated",
+  "displayName": "TinyRpc Generated Message",
+  "version": "1.0.0",
+  "unity": "2020.1",
+  "description": "TinyRpc 生成的消息数据模组",
+  "keywords": [
+    "message",
+    "tiny rpc",
+    "code generation"
+  ],
+  "author": {
+    "name": "bian shanghai",
+    "url": "https://www.jianshu.com/u/275cca6e5f17"
+  },
+  "type": "library"
+}

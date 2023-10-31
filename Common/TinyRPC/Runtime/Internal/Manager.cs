@@ -37,7 +37,7 @@ namespace zFramework.TinyRPC
         public static void RegistAttributeMarkedHandlerTask()
         {
             var types = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(v => Array.Exists(TinyRpcSettings.Instance.AssemblyNames, item => v.FullName.StartsWith($"{item},")))
+                .Where(v => TinyRpcSettings.Instance.AssemblyNames.Exists(item => v.FullName.StartsWith($"{item},")))
                 .SelectMany(v => v.GetTypes())
                 .Where(v => v.GetCustomAttribute<MessageHandlerProviderAttribute>() != null);
 
