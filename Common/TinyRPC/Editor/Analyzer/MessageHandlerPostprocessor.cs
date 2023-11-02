@@ -6,7 +6,6 @@ using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using zFramework.TinyRPC.Settings;
-using static UnityEditor.Progress;
 
 namespace zFramework.TinyRPC.Editor
 {
