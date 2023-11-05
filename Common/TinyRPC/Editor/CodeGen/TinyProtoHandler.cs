@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
 using System;
-using UnityEditor;
 using UnityEngine;
 namespace zFramework.TinyRPC.Editor
 {

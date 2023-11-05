@@ -128,12 +128,12 @@ namespace zFramework.TinyRPC.Editor
                     // validate request 
                     if (parentClass == "Request" && !hasResponseTypeMarked)
                     {
-                        throw new InvalidOperationException($"生成代码失败: Request 类型的消息必须 ResponseType 特性指定相应类型！");
+                        throw new InvalidOperationException($"生成代码失败: Request 类型的消息 {msgName} 必须 ResponseType 特性指定相应类型！");
                     }
                 }
                 else if (parentClass != "")
                 {
-                    Debug.LogWarning($"{nameof(TinyProtoHandler)}: TinyRPC 消息只能继承自 Message、Request、Response ");
+                    Debug.LogWarning($"{nameof(TinyProtoHandler)}: 消息 {msgName} 只能 0 继承或继承自 Message、Request、Response ");
                 }
                 sb.AppendLine("\n\t{");
                 isInsideMessage = true;
