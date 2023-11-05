@@ -7,6 +7,7 @@ message TestRPCRequest // Request
 }
 
 // 注释bb
+// xxxx muilt summary
 message TestRPCResponse // Response
 {
 	string name ;
@@ -18,6 +19,28 @@ message TestMessage // Message
 	string message;
 	// 年龄（fake info）
 	int32 age;
+}
+
+// C2S = Client to Server
+//ResponseType S2C_Login
+message C2S_Login // Request
+{
+	string name ;
+	string password ;
+}
+
+// S2C = Server to Client
+message S2C_Login // Response
+{
+    bool success;
+    string token;
+    string errorDesc;
+}
+
+// Test for Handler Regist by Attribute  
+message AttributeRegistTestMessage // Message 
+{
+	string desc;
 }
 
 // 角色移动信息
