@@ -15,13 +15,10 @@ namespace zFramework.TinyRPC.Settings
         //filter log message, default is Ping (must use full type name here)
         public List<string> logFilters = new() { "zFramework.TinyRPC.Ping" };
 
-        [Header("心跳包发送频率 （单位：毫秒）")]
         public int pingInterval = 1000;
 
-        [Header("心跳包超时重试次数")]
         public int pingRetry = 3;
 
-        [Header("RPC 最小超时 （单位：毫秒）"), Tooltip("用户 Response 设定的值过小时，以此设定值为准！ Ping 消息也受此影响~")]
         public int rpcTimeout = 5000;
 
         [Header("开启log (应用于 PostProcessor)")]

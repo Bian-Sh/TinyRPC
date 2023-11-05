@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using zFramework.TinyRPC.Settings;
@@ -40,12 +37,21 @@ namespace zFramework.TinyRPC.Editor
             so.Update();
             // draw delay inputfield as their values should be validate then
             // validate input value is on going at TinyRpcSettings.Onvalidate Function
+            EditorGUILayout.LabelField(pingIntervalContent, EditorStyles.boldLabel);
             EditorGUILayout.DelayedIntField(pingInterval);
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField(pingRetryContent, EditorStyles.boldLabel);
             EditorGUILayout.DelayedIntField(pingRetry);
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField(rpcTimeoutContent, EditorStyles.boldLabel);
             EditorGUILayout.DelayedIntField(rpcTimeout);
-
+            EditorGUILayout.Space(4);
             EditorGUILayout.PropertyField(logEnabled);
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField(asmNameContent, EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(assemblyNames);
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField(logFilterContent, EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(logFilters);
 
             if (changeScope.changed)
@@ -54,25 +60,12 @@ namespace zFramework.TinyRPC.Editor
             }
         }
 
-
-        private void DrawRuntimeSettings()
-        {
-
-            GUILayout.Space(15);
-
-            /* 写到 Editor 里面，方便用户选择外部 proto 文件更新
-            //using (new GUILayout.HorizontalScope())
-            //{
-            //    asset = EditorGUILayout.ObjectField("Proto 文件：", asset, typeof(DefaultAsset), false) as DefaultAsset;
-            //    if (GUILayout.Button(updateBt_cnt, GUILayout.Width(60)))
-            //    {
-            //        SelectAndLoadProtoFile();
-            //    }
-            //}
-             */
-
-
-        }
-
+        #region GUIContents
+        GUIContent pingIntervalContent = new("心跳包发送频率 （单位：毫秒）", "请勿设置过快的发送频次！");
+        GUIContent pingRetryContent = new("心跳包重试次数", "请勿设置过大的重试次数，且不可负值！");
+        GUIContent rpcTimeoutContent = new("RPC 最小超时 （单位：毫秒）", "用户 Response 设定的值过小时，将以此设定值为准！ Ping 消息也受此影响~");
+        GUIContent asmNameContent = new("包含 MessageHandler 的Assembly ", "为减少遍历，在编辑器下会自动收集 MessageHandler 所在的程序集，如果在程序集名称前加英文字符的惊叹号，则代表编辑器下无需监测此程序集（代表你认为此程序集绝对不会出现 MessageHandler）");
+        GUIContent logFilterContent = new("不输出到控制台的消息", "有些消息接受发送的非常频繁，为了避免干扰开发，可以加入到这个列表, 例如 Ping 消息");
+        #endregion
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Text;
 using UnityEditor;
@@ -109,7 +108,7 @@ namespace zFramework.TinyRPC.Editor
             rt.height = 24;
             rt.x = window.position.width - rt.width - 10;
             rt.y = window.position.height - rt.height - 10;
-            indentWithTabProperty.boolValue = EditorGUI.ToggleLeft(rt, "使用 Tab 缩进", indentWithTabProperty.boolValue);
+            indentWithTabProperty.boolValue = EditorGUI.ToggleLeft(rt, indentwithtab_content, indentWithTabProperty.boolValue);
         }
 
         private void DrawCodeGenerateButton()
@@ -241,6 +240,7 @@ namespace zFramework.TinyRPC.Editor
         }
 
         #region GUIContents and message
+        GUIContent indentwithtab_content = new("使用 Tab 缩进", "取消勾选使用 4 个空格代表一个 Tab (visual studio)");
         GUIContent initBt_cnt = new GUIContent("请选择 proto 文件", "请选择用于生成 .cs 实体类的 proto 文件");
         GUIContent updateBt_cnt = new GUIContent("更新", "选择新的 proto 文件，如果此文件在工程外，将会复制到工程内，覆盖原有的 proto 文件");
         GUIContent tips = new GUIContent("操作完成，请等待编译...");
