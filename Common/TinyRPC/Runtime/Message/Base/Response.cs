@@ -7,9 +7,9 @@ namespace zFramework.TinyRPC.Messages
     public class Response : IResponse
     {
         public string error;
-        public int id;
+        public int rid;
         /// <inheritdoc/>
-        public int Id { get => id; set => id = value; }
+        public int Rid { get => rid; set => rid = value; }
         /// <inheritdoc/>
         public string Error { get => error; set => error = value; }
         public override string ToString() => JsonUtility.ToJson(this);

@@ -11,7 +11,7 @@ namespace zFramework.TinyRPC
         public string error;
         public int id;
         /// <inheritdoc/>
-        public int Id { get => id; set => id = value; }
+        public int Rid { get => id; set => id = value; }
         public int Timeout { get; set; } // 在 Ping 对传中采用默认timeout,无需序列化报告给对方
         public string Error { get => error; set => error = value; }
     }

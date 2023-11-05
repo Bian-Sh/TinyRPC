@@ -253,7 +253,7 @@ namespace zFramework.TinyRPC
                 if (rpcMessagePairs.TryGetValue(type, out var responseType))
                 {
                     response = Activator.CreateInstance(responseType) as IResponse;
-                    response.Id = request.Id;
+                    response.Rid = request.Rid;
                     await handler.Dispatch(session, request, response);
                 }
                 else
@@ -261,7 +261,7 @@ namespace zFramework.TinyRPC
                     var error = $"RPC 消息 {request.GetType().Name} 没有找到对应的 Response 类型！";
                     response = new Response
                     {
-                        Id = request.Id,
+                        Rid = request.Rid,
                         Error = error
                     };
                     Debug.LogWarning($"{nameof(Manager)}: {error}");
@@ -272,7 +272,7 @@ namespace zFramework.TinyRPC
                 var error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！";
                 response = new Response
                 {
-                    Id = request.Id,
+                    Rid = request.Rid,
                     Error = error
                 };
                 Debug.LogWarning($"{nameof(Manager)}: {error}");
@@ -281,10 +281,10 @@ namespace zFramework.TinyRPC
         }
         internal static void HandleResponse(IResponse response)
         {
-            if (rpcInfoPairs.TryGetValue(response.Id, out var rpcInfo))
+            if (rpcInfoPairs.TryGetValue(response.Rid, out var rpcInfo))
             {
                 rpcInfo.task.SetResult(response);
-                rpcInfoPairs.Remove(response.Id);
+                rpcInfoPairs.Remove(response.Rid);
             }
         }
 
@@ -298,10 +298,10 @@ namespace zFramework.TinyRPC
             cts.Token.Register(() => tcs.TrySetException(exception), useSynchronizationContext: false);
             var rpcinfo = new RpcInfo
             {
-                id = request.Id,
+                id = request.Rid,
                 task = tcs,
             };
-            rpcInfoPairs.Add(request.Id, rpcinfo);
+            rpcInfoPairs.Add(request.Rid, rpcinfo);
             return tcs.Task;
         }
 
@@ -315,7 +315,7 @@ namespace zFramework.TinyRPC
                 type = typeof(Response);
             }
             response = Activator.CreateInstance(type) as IResponse;
-            response.Id = request.Id;
+            response.Rid = request.Rid;
             response.Error = response is Response ? $"RPC 消息 {request.GetType().Name} 没有找到对应的 Response 类型！" : "";
 
             return response;

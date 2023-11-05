@@ -78,7 +78,7 @@ namespace zFramework.TinyRPC
             }
             // 原子操作，保证 id 永远自增 1且不会溢出,溢出就从0开始
             Interlocked.CompareExchange(ref id, 0, int.MaxValue);
-            request.Id = Interlocked.Increment(ref id);
+            request.Rid = Interlocked.Increment(ref id);
 
             var bytes = SerializeHelper.Serialize(request);
             Send(MessageType.RPC, bytes);  // do not catch any exception here,jut let it throw out
