@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 // todo : 整合编辑器设置和运行时设置，编辑器下做代码生成，运行时做 Assembly 过滤和 Log 过滤
@@ -28,205 +25,62 @@ namespace zFramework.TinyRPC.Editor
 {
     public class TinyRpcEditorWindow : EditorWindow
     {
+        private RuntimeSettingsLayout runtimeSettingsLayout;
+        private EditorSettingsLayout editorSettingsLayout;
+
         int selected = 0;
         static GUIContent[] toolbarContents;
 
-        static string MessagePath;
-        static string ProtoPath;
-        static string ProtoPathKey = $"{nameof(TinyRpcEditorWindow)}-ProtoPath-Key";
-        DefaultAsset asset;
-        SerializedObject serializedObject_editor;
-
-        static EditorWindow window;
         [MenuItem("Tools/.proto 转 .cs 实体类")]
-        public static void ShowWindow()
-        {
-            window = GetWindow(typeof(TinyRpcEditorWindow));
-        }
+        public static void ShowWindow() => GetWindow(typeof(TinyRpcEditorWindow));
         public void OnEnable()
         {
             // title with version
             var package = PackageInfo.FindForAssembly(typeof(TinyRpcEditorWindow).Assembly);
             var version = package.version;
             titleContent = new GUIContent($"TinyRPC (ver {version})");
+            minSize = new Vector2(360, 220);
+
+            //init layout instance
+            runtimeSettingsLayout = new RuntimeSettingsLayout(this);
+            editorSettingsLayout = new EditorSettingsLayout(this);
 
             // init Editor Settings
             toolbarContents = new GUIContent[] { BT_LT, BT_RT };
-            serializedObject_editor = new SerializedObject(TinyRpcEditorSettings.Instance);
-
-            MessagePath = $"{Application.dataPath}/TinyRPC/Generated";
-            if (!Directory.Exists(MessagePath))
-            {
-                Directory.CreateDirectory(MessagePath);
-            }
-            ProtoPath = EditorPrefs.GetString(ProtoPathKey);
-            if (!string.IsNullOrEmpty(ProtoPath))
-            {
-                asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(ProtoPath);
-            }
-            minSize = new Vector2(360, 220);
         }
 
         private void OnGUI()
         {
-            using (var changescope = new EditorGUI.ChangeCheckScope())
+            //draw tab Editor and Runtime
+            GUILayout.Space(10);
+            using (new EditorGUILayout.HorizontalScope())
             {
-                //draw tab Editor and Runtime
-                GUILayout.Space(10);
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    GUILayout.FlexibleSpace();
-                    var idx = EditorPrefs.GetInt(key, 0);
-                    selected = GUILayout.Toolbar(idx, toolbarContents, GUILayout.Height(EditorGUIUtility.singleLineHeight * 1.2f));
+                GUILayout.FlexibleSpace();
+                var idx = EditorPrefs.GetInt(key, 0);
+                selected = GUILayout.Toolbar(idx, toolbarContents, GUILayout.Height(EditorGUIUtility.singleLineHeight * 1.2f));
 
-                    if (selected != idx)
-                    {
-                        idx = selected;
-                        EditorPrefs.SetInt(key, idx);
-                    }
-                    GUILayout.FlexibleSpace();
-                }
-                if (selected == 0)
+                if (selected != idx)
                 {
-                    DrawEditorSettings();
-                    if (changescope.changed)
-                    {
-                        serializedObject_editor.ApplyModifiedProperties();
-                        TinyRpcEditorSettings.Save();
-                    }
-                    DrawCodeGenerateButton();
+                    idx = selected;
+                    EditorPrefs.SetInt(key, idx);
                 }
-                else
-                {
-                    DrawRuntimeSettings();
-                    // 检测ObjectField是否有修改
-                    if (changescope.changed)
-                    {
-                        ProtoPath = asset ? AssetDatabase.GetAssetPath(asset) : string.Empty;
-                        EditorPrefs.SetString(ProtoPathKey, ProtoPath);
-                    }
-                }
+                GUILayout.FlexibleSpace();
+            }
+            if (selected == 0)
+            {
+                // Draw Editor Settings 
+                editorSettingsLayout.Draw();
+            }
+            else
+            {
+                //Draw Runtime Settings
+                runtimeSettingsLayout.Draw();
             }
         }
 
-        private void DrawEditorSettings()
-        {
-            //Draw Editor Settings
-            GUILayout.Space(15);
-            serializedObject_editor.Update();
-            EditorGUILayout.PropertyField(serializedObject_editor.FindProperty("protos"), true);
-        }
-
-        private void DrawCodeGenerateButton()
-        {
-            var rt = GUILayoutUtility.GetLastRect();
-            rt.width = 200;
-            rt.height = 48;
-            rt.x = (position.width - rt.width) / 2;
-            rt.y = position.height - rt.height - 10;
-            if (GUI.Button(rt, "生成 .cs 实体类"))
-            {
-                TryCreateAssemblyDefinitionFile();
-                TinyProtoHandler.Proto2CS("zFramework.TinyRPC.Generated", asset, MessagePath);
-                ShowNotification(tips);
-                AssetDatabase.Refresh();
-            }
-        }
-        private void DrawRuntimeSettings()
-        {
-            if (!asset)
-            {
-                //获取当前 editorwindow 宽高
-                var rect = EditorGUILayout.GetControlRect();
-                rect.height = 48;
-                rect.width = 200;
-                rect.x = (position.width - rect.width) / 2;
-                rect.y = (position.height - rect.height) / 2;
-                if (GUI.Button(rect, initBt_cnt))
-                {
-                    SelectAndLoadProtoFile();
-                }
-                return;
-            }
-            GUILayout.Space(15);
-            using (new GUILayout.HorizontalScope())
-            {
-                asset = EditorGUILayout.ObjectField("Proto 文件：", asset, typeof(DefaultAsset), false) as DefaultAsset;
-                if (GUILayout.Button(updateBt_cnt, GUILayout.Width(60)))
-                {
-                    SelectAndLoadProtoFile();
-                }
-            }
-            var relativePath = FileUtil.GetProjectRelativePath(MessagePath);
-            // Debug.Log($"{nameof(TinyRpcEditorWindow)}: relative path = {relativePath} ");
-            //todo: 判断是否为 只读的 package 文件夹，还是 Editor 内的文件夹，还是 Editor 程序集中的文件夹
-            //TODO: 和setting整合 ，使用 tab 页签切换
-
-            GUI.enabled = false;
-            var folder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(relativePath);
-            EditorGUILayout.ObjectField("消息存储路径：", folder, typeof(DefaultAsset), false);
-            GUI.enabled = true;
-            GUILayout.Space(15);
-            var style_helpbox = GUI.skin.GetStyle("HelpBox");
-            var size_font = style_helpbox.fontSize;
-            style_helpbox.fontSize = 12;
-            var content = new GUIContent(notice, EditorGUIUtility.IconContent("console.infoicon").image);
-            var height = style_helpbox.CalcHeight(content, EditorGUIUtility.currentViewWidth);
-            EditorGUILayout.LabelField(content, style_helpbox, GUILayout.Height(height));
-            style_helpbox.fontSize = size_font;
-            GUILayout.Space(15);
-        }
-
-        private void SelectAndLoadProtoFile()
-        {
-            var path = EditorUtility.OpenFilePanelWithFilters("请选择 .proto 文件", Application.dataPath, new string[] { "Protobuf file", "proto" });
-            if (!string.IsNullOrEmpty(path))
-            {
-                ProtoPath = FileUtil.GetProjectRelativePath(path);
-                if (string.IsNullOrEmpty(ProtoPath)) //.proto 文件不在工程内，则拷贝到工程中,且覆盖原有的 proto 文件
-                {
-                    var fileName = Path.GetFileName(path);
-                    var destPath = $"{MessagePath}/{fileName}";
-                    File.Copy(path, destPath, true);
-                    ProtoPath = FileUtil.GetProjectRelativePath(destPath);
-                    AssetDatabase.Refresh();
-                }
-                EditorPrefs.SetString(ProtoPathKey, ProtoPath);
-                asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(ProtoPath);
-            }
-        }
-        /// <summary>
-        /// 为降低反射遍历消息的次数、减小编译时长，故使用 AssemblyDefinition 
-        /// </summary>
-        private static void TryCreateAssemblyDefinitionFile()
-        {
-            string file = "com.network.generated.asmdef";
-            string content = @"{
-    ""name"": ""com.network.generated"",
-    ""references"": [
-        ""GUID:c5a44f231aee9ef4895a10427e883834""
-    ],
-    ""autoReferenced"": true
-}";
-            var path = Path.Combine(MessagePath, file);
-            if (!File.Exists(path))
-            {
-                File.WriteAllText(path, content, Encoding.UTF8);
-                Debug.Log($"Assembly Definition File 生成 {file} 成功！");
-            }
-        }
-
-
-        #region GUIContents and message
+        #region GUIContents for tabs
         static GUIContent BT_LT = new GUIContent("Editor", "编辑器下使用的配置");
         static GUIContent BT_RT = new GUIContent("Runtime", "运行时使用的配置");
-        GUIContent initBt_cnt = new GUIContent("请选择 proto 文件", "请选择用于生成 .cs 实体类的 proto 文件");
-        GUIContent updateBt_cnt = new GUIContent("更新", "选择新的 proto 文件，如果此文件在工程外，将会复制到工程内，覆盖原有的 proto 文件");
-        GUIContent tips = new GUIContent("操作完成，请等待编译...");
-        string notice = @"1. 选择的 .proto 文件不在工程中则拷贝至工程中
-2. 拷贝的副本只存在一份，永远执行覆盖操作
-3. 选择的 .proto 文件位于工程中则不做上述处理
-4.  proto 文件中的语法是基于 proto3 语法的变体（精简版）";
         const string key = "TinyRPC Tab Index";
         #endregion
     }
