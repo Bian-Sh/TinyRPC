@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
@@ -10,15 +11,49 @@ namespace zFramework.TinyRPC.Editor
     {
         UnityEditor.Editor editor;
         EditorWindow window;
+        SerializedProperty pingInterval;
+        SerializedProperty pingRetry;
+        SerializedProperty rpcTimeout;
+        SerializedProperty assemblyNames; //where handlers located
+        SerializedProperty logFilters; //log filters, such as ping etc. in case of too many logs at a time
+        SerializedProperty logEnabled;
+
         public RuntimeSettingsLayout(EditorWindow window)
         {
             this.window = window;
+        }
+        internal void OnEnable()
+        {
             editor = UnityEditor.Editor.CreateEditor(TinyRpcSettings.Instance);
+            assemblyNames = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.assemblyNames));
+            logFilters = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.logFilters));
+            pingInterval = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.pingInterval));
+            pingRetry = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.pingRetry));
+            rpcTimeout = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.rpcTimeout));
+            logEnabled = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.logEnabled));
         }
         public void Draw()
         {
-            editor.DrawDefaultInspector();
+            // draw inspector without script field
+            using var changeScope = new EditorGUI.ChangeCheckScope();
+            var so = editor.serializedObject;
+            so.Update();
+            // draw delay inputfield as their values should be validate then
+            // validate input value is on going at TinyRpcSettings.Onvalidate Function
+            EditorGUILayout.DelayedIntField(pingInterval);
+            EditorGUILayout.DelayedIntField(pingRetry);
+            EditorGUILayout.DelayedIntField(rpcTimeout);
+
+            EditorGUILayout.PropertyField(logEnabled);
+            EditorGUILayout.PropertyField(assemblyNames);
+            EditorGUILayout.PropertyField(logFilters);
+
+            if (changeScope.changed)
+            {
+                so.ApplyModifiedProperties();
+            }
         }
+
 
         private void DrawRuntimeSettings()
         {

@@ -37,7 +37,7 @@ namespace zFramework.TinyRPC
         public static void RegistAttributeMarkedHandlerTask()
         {
             var types = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(v => TinyRpcSettings.Instance.AssemblyNames.Exists(item => v.FullName.StartsWith($"{item},")))
+                .Where(v => TinyRpcSettings.Instance.assemblyNames.Exists(item => v.FullName.StartsWith($"{item},")))
                 .SelectMany(v => v.GetTypes())
                 .Where(v => v.GetCustomAttribute<MessageHandlerProviderAttribute>() != null);
 
@@ -292,7 +292,8 @@ namespace zFramework.TinyRPC
         {
             var tcs = new TaskCompletionSource<IResponse>();
             var cts = new CancellationTokenSource();
-            var timeout = Mathf.Max(request.Timeout, 5000); //至少等待 5 秒的响应机会，这在发生复杂操作时很有效
+            //等待并给定特定时长的响应机会，这在发生复杂操作时很有效
+            var timeout = Mathf.Max(request.Timeout, TinyRpcSettings.Instance.rpcTimeout);
             cts.CancelAfter(timeout);
             var exception = new TimeoutException($"RPC Call Timeout! Request: {request}");
             cts.Token.Register(() => tcs.TrySetException(exception), useSynchronizationContext: false);

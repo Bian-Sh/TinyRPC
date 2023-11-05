@@ -10,11 +10,21 @@ namespace zFramework.TinyRPC.Settings
     public class TinyRpcSettings : ScriptableObject
     {
         //specific from which assembly you can collect handlers
-        public List<string> AssemblyNames = new() { "Assembly-CSharp" };
+        public List<string> assemblyNames = new() { "Assembly-CSharp" };
 
         //filter log message, default is Ping (must use full type name here)
-        public List<string> LogFilters = new() { "zFramework.TinyRPC.Ping" };
-        [Header("PostProcessor 开启log")]
+        public List<string> logFilters = new() { "zFramework.TinyRPC.Ping" };
+
+        [Header("心跳包发送频率 （单位：毫秒）")]
+        public int pingInterval = 1000;
+
+        [Header("心跳包超时重试次数")]
+        public int pingRetry = 3;
+
+        [Header("RPC 最小超时 （单位：毫秒）"), Tooltip("用户 Response 设定的值过小时，以此设定值为准！ Ping 消息也受此影响~")]
+        public int rpcTimeout = 5000;
+
+        [Header("开启log (应用于 PostProcessor)")]
         public bool logEnabled;
 
 
@@ -50,6 +60,32 @@ namespace zFramework.TinyRPC.Settings
             EditorUtility.SetDirty(this);
             AssetDatabase.SaveAssets();
         }
+
+        private void OnValidate()
+        {
+            // validate pingInterval, can not less then 500 ms
+            if (pingInterval < 500)
+            {
+                pingInterval = 1000;
+                Debug.LogError($"{nameof(TinyRpcSettings)}: 心跳包发送请不要设置的过于频繁！");
+            }
+            // validate pingRetry, can not less then 0
+            if (pingRetry < 0) 
+            {
+                pingRetry = 3;
+                Debug.LogError($"{nameof(TinyRpcSettings)}: 心跳包重试次数不能取负值！");
+            }
+            // validate rpcTimeout, can not less then 5000 ms
+            // beware: rpcTimeout is the minimum value of response timeout
+            // if user set response timeout less then rpcTimeout, use rpcTimeout instead
+            // but if user set response timeout greater then rpcTimeout, use user's setting
+            if (rpcTimeout < 1000)
+            {
+                rpcTimeout = 1000;
+                Debug.LogError($"{nameof(TinyRpcSettings)}: RPC 超时时间不能小于 1000 ms！");
+            }
+        }
+
 #endif
     }
 }

@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEngine;
 namespace zFramework.TinyRPC.Editor
 {
     [FilePath("ProjectSettings/TinyRpcEditorSettings.asset")]
@@ -9,5 +7,6 @@ namespace zFramework.TinyRPC.Editor
     {
         public List<DefaultAsset> protos;
         public string generatedScriptLocation;
+        public bool indentWithTab;
     }
 }

@@ -5,6 +5,7 @@ using System;
 using zFramework.TinyRPC.Messages;
 using System.Threading.Tasks;
 using zFramework.TinyRPC.Exceptions;
+using zFramework.TinyRPC.Settings;
 
 namespace zFramework.TinyRPC
 {
@@ -26,9 +27,6 @@ namespace zFramework.TinyRPC
         ///  <br>参数2：ping 值</br>
         /// </summary>
         public Action<float, int> OnPingCaculated;
-
-        public int PingInterval = 2000;
-        public int PingCount = 3; // retry 3 times if ping timeout
 
         public TinyClient(string ip, int port)
         {
@@ -121,14 +119,14 @@ namespace zFramework.TinyRPC
                     // 服务器与客户端的时间差，用于在客户端上换算服务器时间
                     var delta = (response.time - ClientTime) / 10000.0f + ping / 2;
                     OnPingCaculated?.Invoke(delta, ping);
-                    await Task.Delay(PingInterval);
+                    await Task.Delay(TinyRpcSettings.Instance.pingInterval);
                 }
                 // 只有当收到的异常是 RpcResponseException  或者 TimeoutException 时才重试
                 catch (Exception e) when (e is RpcResponseException || e is TimeoutException)
                 {
                     Debug.LogError($"{nameof(TinyClient)}: Ping Error {e} ， retry count  = {count}");
                     count++;
-                    if (count > PingCount)
+                    if (count > TinyRpcSettings.Instance.pingRetry)
                     {
                         Stop();
                         Debug.LogError($"{nameof(TinyClient)}: Ping Timeout!");
@@ -154,7 +152,7 @@ namespace zFramework.TinyRPC
                 {
                     await Session.ReceiveAsync();
                 }
-                catch (Exception e)when (e is not RpcResponseException && e is not TimeoutException)
+                catch (Exception e) when (e is not RpcResponseException && e is not TimeoutException)
                 {
                     Debug.LogError($"{nameof(TinyClient)}: Receive Error {e}");
                     Stop();

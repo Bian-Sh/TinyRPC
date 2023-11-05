@@ -135,7 +135,7 @@ namespace zFramework.TinyRPC
         private void OnMessageReceived(byte type, byte[] content)
         {
             var message = SerializeHelper.Deserialize(content);
-            if (!TinyRpcSettings.Instance.LogFilters.Contains(message.GetType().FullName)) //Settings can only be created in main thread
+            if (!TinyRpcSettings.Instance.logFilters.Contains(message.GetType().FullName)) //Settings can only be created in main thread
             {
                 Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 =  {JsonUtility.ToJson(message)}");
             }
@@ -165,7 +165,7 @@ namespace zFramework.TinyRPC
             source?.Dispose();
             IsAlive = false;
         }
-        private static int id = 0;
+        private int id = 0;
         private readonly TcpClient client;
         private readonly CancellationTokenSource source;
         private readonly SynchronizationContext context;

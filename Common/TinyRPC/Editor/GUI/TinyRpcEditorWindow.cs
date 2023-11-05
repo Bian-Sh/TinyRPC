@@ -33,6 +33,7 @@ namespace zFramework.TinyRPC.Editor
 
         [MenuItem("Tools/.proto 转 .cs 实体类")]
         public static void ShowWindow() => GetWindow(typeof(TinyRpcEditorWindow));
+
         public void OnEnable()
         {
             // title with version
@@ -42,8 +43,10 @@ namespace zFramework.TinyRPC.Editor
             minSize = new Vector2(360, 220);
 
             //init layout instance
-            runtimeSettingsLayout = new RuntimeSettingsLayout(this);
-            editorSettingsLayout = new EditorSettingsLayout(this);
+            runtimeSettingsLayout ??= new RuntimeSettingsLayout(this);
+            editorSettingsLayout ??= new EditorSettingsLayout(this);
+            runtimeSettingsLayout.OnEnable();
+            editorSettingsLayout.OnEnable();
 
             // init Editor Settings
             toolbarContents = new GUIContent[] { BT_LT, BT_RT };
@@ -66,6 +69,7 @@ namespace zFramework.TinyRPC.Editor
                 }
                 GUILayout.FlexibleSpace();
             }
+            GUILayout.Space(15);
             if (selected == 0)
             {
                 // Draw Editor Settings 

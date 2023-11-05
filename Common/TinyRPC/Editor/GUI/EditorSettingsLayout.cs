@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 using UnityEditor;
@@ -10,42 +11,38 @@ namespace zFramework.TinyRPC.Editor
         EditorWindow window;
         SerializedObject serializedObject;
         SerializedProperty protoProperty;
+        SerializedProperty indentWithTabProperty;
         const string ProtoLocation = "Assets/TinyRPC/Proto";
-        public EditorSettingsLayout(EditorWindow window)
+        public EditorSettingsLayout(EditorWindow window) => this.window = window;
+
+        internal void OnEnable() => InitLayout();
+
+        private void InitLayout()
         {
-            this.window = window;
             settings = TinyRpcEditorSettings.Instance;
             serializedObject = new SerializedObject(settings);
             protoProperty = serializedObject.FindProperty("protos");
+            indentWithTabProperty = serializedObject.FindProperty("indentWithTab");
         }
+
         public void Draw()
         {
-            GUILayout.Space(15);
             //编辑器下切换场景时，settings 会被置空，故重新获取
-            ValidateSerializedObject();
+            if (null == serializedObject || !serializedObject.targetObject)
+            {
+                InitLayout();
+            }
             serializedObject.Update();
             using var changescope = new EditorGUI.ChangeCheckScope();
             DrawArrayEmptyInterface();
             DrawMainContent();
             DrawEditorHelpbox();
+            DrawIndentToggle();
             DrawCodeGenerateButton();
             if (changescope.changed)
             {
-                Debug.Log($"{nameof(EditorSettingsLayout)}: changes occured");
                 serializedObject.ApplyModifiedProperties();
-                Debug.Log($"{nameof(EditorSettingsLayout)}: Settings protos count = {settings.protos.Count} ");
                 Save();
-            }
-        }
-
-        private void ValidateSerializedObject()
-        {
-            if (serializedObject == null || !serializedObject.targetObject)
-            {
-                settings = TinyRpcEditorSettings.Instance;
-                serializedObject = new SerializedObject(settings);
-                protoProperty = serializedObject.FindProperty("protos");
-                // maybe more property need be re-find
             }
         }
 
@@ -105,6 +102,15 @@ namespace zFramework.TinyRPC.Editor
             style_helpbox.fontSize = size_font;
             GUILayout.Space(15);
         }
+        private void DrawIndentToggle()
+        {
+            var rt = GUILayoutUtility.GetLastRect();
+            rt.width = 100;
+            rt.height = 24;
+            rt.x = window.position.width - rt.width - 10;
+            rt.y = window.position.height - rt.height - 10;
+            indentWithTabProperty.boolValue = EditorGUI.ToggleLeft(rt, "使用 Tab 缩进", indentWithTabProperty.boolValue);
+        }
 
         private void DrawCodeGenerateButton()
         {
@@ -122,10 +128,11 @@ namespace zFramework.TinyRPC.Editor
                 {
                     if (proto)
                     {
-                        TinyProtoHandler.Proto2CS("zFramework.TinyRPC.Generated", proto, settings.generatedScriptLocation);
+                        var protoPath = AssetDatabase.GetAssetPath(proto);
+                        var protoContent = File.ReadAllText(protoPath);
+                        TinyProtoHandler.Proto2CS(proto.name, protoContent, settings.generatedScriptLocation);
                     }
                 }
-
                 window.ShowNotification(tips);
                 AssetDatabase.Refresh();
             }
@@ -224,6 +231,8 @@ namespace zFramework.TinyRPC.Editor
             };
             return type;
         }
+
+
         public enum LocationType
         {
             Assets,
