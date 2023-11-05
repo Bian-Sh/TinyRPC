@@ -72,7 +72,7 @@ namespace zFramework.TinyRPC.Editor
                     continue;
                 }
 
-                var list = TinyRpcSettings.Instance.AssemblyNames;
+                var list = TinyRpcSettings.Instance.assemblyNames;
                 Debug.Log($"{nameof(MessageHandlerPostprocessor)}: assemblyName {assemblyName} - {type.Name}");
                 // 如果有存储过，或者用户声明不扫描，则不处理
                 // 约定：如果以 ! 开头，则表示不扫描
@@ -90,7 +90,7 @@ namespace zFramework.TinyRPC.Editor
                 if (hasMessageHandler)
                 {
                     Debug.Log($"{nameof(MessageHandlerPostprocessor)}: 检测到 {assemblyName}.{type.Name} 包含 MessageHandler，已添加到 TinyRpcSettings 中");
-                    TinyRpcSettings.Instance.AssemblyNames.Add(assemblyName);
+                    TinyRpcSettings.Instance.assemblyNames.Add(assemblyName);
                     TinyRpcSettings.Instance.Save();
                 }
             }
