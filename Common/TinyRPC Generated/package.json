@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "com.zframework.tinyrpc.generated",
   "displayName": "TinyRPC Generated",
   "version": "1.0.0",
@@ -8,9 +8,5 @@
     "tiny rpc",
     "code generation"
   ],
-  "author": {
-    "name": "bian shanghai",
-    "url": "https://www.jianshu.com/u/275cca6e5f17"
-  },
   "type": "library"
 }
