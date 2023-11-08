@@ -19,7 +19,6 @@ namespace zFramework.TinyRPC.Editor
                 isFocused = InternalEditorUtility.isApplicationActive;
                 if (isFocused)
                 {
-                    TinyRpcEditorSettings.LoadOrCreate();
                     OnEditorFocused?.Invoke();
                 }
             }
