@@ -25,7 +25,7 @@ namespace zFramework.TinyRPC.Editor
                 {
                     continue;
                 }
-                var scriptInfo = ResolveBlockInfo(info, processor);
+                var scriptInfo =processor.ResolveBlockInfo(info);
                 string csPath = Path.Combine(root, $"{scriptInfo.type}/{scriptInfo.name}.cs");
                 var dir = Path.GetDirectoryName(csPath);
                 if (!Directory.Exists(dir))
@@ -38,44 +38,6 @@ namespace zFramework.TinyRPC.Editor
             }
         }
 
-        /// <summary>
-        ///  根据消息块信息，生成消息代码
-        /// </summary>
-        /// <param name="block">分割的消息数据</param>
-        /// <returns>消息代码内容</returns>
-        public static ScriptInfo ResolveBlockInfo(string block, ProtoContentProcessor processor)
-        {
-            var lines = block.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-            for (int i = 0; i < lines.Length; i++)
-            {
-                var line = lines[i].Trim();
-                //use keyword "message" instead of "{" for checking whether inside message
-                if (string.IsNullOrEmpty(line) || line == "{")
-                {
-                    continue;
-                }
-                if (line.StartsWith("//"))
-                {
-                    if (line.StartsWith("//ResponseType")) // response type
-                    {
-                        processor.AddResponseType(line);
-                    }
-                    else // summary 
-                    {
-                        processor.MarkSummary(line);
-                    }
-                    continue;
-                }
-                // message
-                if (line.StartsWith("message"))
-                {
-                    processor.AddMessageType(line);
-                    continue;
-                }
-                processor.AddMember(line);
-            }
-            return processor.ToScriptInfo();
-        }
+ 
     }
 }
