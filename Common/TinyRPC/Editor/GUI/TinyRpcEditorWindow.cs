@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
@@ -27,7 +26,7 @@ namespace zFramework.TinyRPC.Editor
             // title with version
             var package = PackageInfo.FindForAssembly(typeof(TinyRpcEditorWindow).Assembly);
             var version = package.version;
-            titleContent = new GUIContent($"TinyRPC (ver {version})");
+            titleContent = new GUIContent($"TinyRPC (v{version})");
             minSize = new Vector2(360, 220);
 
             //init layout instance

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
@@ -187,7 +186,8 @@ namespace zFramework.TinyRPC.Editor
                     // and save new location as well
                     if (locationType != locationTypecached)
                     {
-                        RemovePrevioursPackage();
+                        AddUpmPackageInfo();
+                        RemovePrevioursPackageEntity();
                         PostProcess();
                     }
                     window.ShowNotification(tips);
@@ -206,7 +206,7 @@ namespace zFramework.TinyRPC.Editor
                 finally
                 {
                     EditorApplication.UnlockReloadAssemblies();
-                    AssetDatabase.Refresh();
+                    AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
                 }
             }
         }
@@ -218,49 +218,26 @@ namespace zFramework.TinyRPC.Editor
             settings.generatedScriptLocation = generatedScriptLocationProperty.stringValue = newLocation;
             serializedObject.ApplyModifiedProperties();
             Save(); // must save before refresh as editor will reload all assemblies
-
-            if (locationType == LocationType.Project)
-            {
-                Client.Add($"file:../../{subLocation}/TinyRPC Generated");
-            }
-            else if (locationType == LocationType.Packages)
-            {
-                try
-                {
-#if true
-                    AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-                    Client.Add("file:TinyRPC Generated");
-
-#else
-                        //can not refresh in time, so i need to write lock json myself
-                        var lockfile = Path.Combine(Application.dataPath, "..", "Packages", "packages-lock.json");
-                        var list = new List<string>(File.ReadAllLines(lockfile));
-                        var index = list.FindIndex(s => s.Contains("com.zframework.tinyrpc.generated"));
-                        if (index == -1)
-                        {
-                            for (int i = index; i < list.Count; i++)
-                            {
-                                if (list[i].Trim().StartsWith("version"))
-                                {
-                                    list[i] = "      \"version\": \"file:TinyRPC Generated\",";
-                                }
-                                if (list[i].Trim().StartsWith("source"))
-                                {
-                                    list[i] = "      \"source\": \"embedded\",";
-                                }
-                            }
-                            File.WriteAllLines(lockfile, list);
-                        }
-#endif
-
-                }
-                catch (Exception e)
-                {
-                    Debug.Log($"{nameof(EditorSettingsLayout)}:  Packages upm install error！{e}");
-                }
-            }
         }
 
+        private void AddUpmPackageInfo()
+        {
+            try
+            {
+                if (locationType == LocationType.Project)
+                {
+                    Client.Add($"file:../../{subLocation}/TinyRPC Generated");
+                }
+                else if (locationType == LocationType.Packages)
+                {
+                    Client.Resolve();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log($"{nameof(EditorSettingsLayout)}:  Packages upm install error！{e}");
+            }
+        }
         private void CreateNewPackage()
         {
             //根据 type 获取新的文件夹
@@ -290,8 +267,7 @@ namespace zFramework.TinyRPC.Editor
                 }
             }
         }
-
-        private void RemovePrevioursPackage()
+        private void RemovePrevioursPackageEntity()
         {
             var current = settings.generatedScriptLocation;
             current = locationTypecached == LocationType.Project ? Path.Combine(Application.dataPath, current) : FileUtil.GetPhysicalPath(current);
@@ -300,19 +276,6 @@ namespace zFramework.TinyRPC.Editor
             //删除现有的文件夹
             if (Directory.Exists(current))
             {
-                if (locationTypecached != LocationType.Assets)
-                {
-                    // 如果是packages 文件夹下且是 Project 同级，先删除 manifest.json 文件中的相关配置
-                    //todo :这里是异步，我自己处理 manifest.json 文件吧
-                    var manifestfile = Path.Combine(Application.dataPath, "..", "Packages", "manifest.json");
-                    var list = new List<string>(File.ReadAllLines(manifestfile));
-                    var index = list.FindIndex(s => s.Contains("com.zframework.tinyrpc.generated"));
-                    if (index != -1)
-                    {
-                        list.RemoveAt(index);
-                        File.WriteAllLines(manifestfile, list);
-                    }
-                }
                 FileUtil.DeleteFileOrDirectory(current);
                 var meta = $"{current}.meta";
                 if (File.Exists(meta))
@@ -325,8 +288,20 @@ namespace zFramework.TinyRPC.Editor
             {
                 Debug.Log($"{nameof(EditorSettingsLayout)}: can not find dir named {current}");
             }
-        }
 
+            //这里是异步，我自己处理 manifest.json 文件吧
+            if (locationTypecached == LocationType.Project)
+            {
+                var manifestfile = Path.Combine(Application.dataPath, "..", "Packages", "manifest.json");
+                var list = new List<string>(File.ReadAllLines(manifestfile));
+                var index = list.FindIndex(s => s.Contains("com.zframework.tinyrpc.generated"));
+                if (index != -1)
+                {
+                    list.RemoveAt(index);
+                    File.WriteAllLines(manifestfile, list);
+                }
+            }
+        }
         private string ValidateSubLocation(string subLocation)
         {
             // 检查是否包含 ../, ./, 或 //
@@ -347,7 +322,6 @@ namespace zFramework.TinyRPC.Editor
             // 如果没有问题，返回 null
             return null;
         }
-
         public string ExtractSubLocation(string path)
         {
             // 确保路径以 TinyRPC Generated 结尾
@@ -376,8 +350,6 @@ namespace zFramework.TinyRPC.Editor
 
             return subLocation;
         }
-
-
         private void SelectAndLoadProtoFile()
         {
             var path = EditorUtility.OpenFilePanelWithFilters("请选择 .proto 文件", Application.dataPath, new string[] { "Protobuf file", "proto" });
@@ -455,8 +427,8 @@ namespace zFramework.TinyRPC.Editor
             // packages: Packages/TinyRPC Generated
             var type = path switch
             {
-                string p when p.EndsWith("Assets/TinyRPC/Generated") || p.StartsWith("Assets") => LocationType.Assets,
-                string p when p.EndsWith("Packages/TinyRPC Generated") || p.StartsWith("Projects") => LocationType.Packages,
+                string p when p.EndsWith("Assets/TinyRPC/Generated") => LocationType.Assets,
+                string p when p.EndsWith("Packages/TinyRPC Generated") => LocationType.Packages,
                 _ => LocationType.Project,
             };
             return type;

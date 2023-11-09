@@ -16,9 +16,6 @@ namespace zFramework.TinyRPC.Generated
         public List<float> Y = new();
         public List<float> Z = new();
         public float A;
-        /// <summary>
-        ///  it is B
-        /// </summary>
         public float B;
         public float C;
         public float W;
