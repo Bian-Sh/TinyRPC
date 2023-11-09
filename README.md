@@ -7,11 +7,11 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
 # 特性
 
-* 支持优雅的 ``async await`` 异步逻辑同步写的编码方式，让你的代码更加简洁易读。
+* 支持``async await`` 异步逻辑同步写的语法糖，让你的代码更加简洁优雅且易读。
 
 * 支持客户端和服务器互发 RPC 请求。
 
-*  支持常规网络消息的收发
+* 支持常规网络消息的收发
 
 
 # 功能
@@ -36,16 +36,16 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
 > 消息类一键生成
 
-使用基于 proto3 精简版语法的 .proto 文件，可以一键生成消息类。如果存在多个 .proto 文件则会将消息生成在 .proto 文件名命名的文件夹中。
+使用基于 proto3 精简版语法的 .proto 文件，可以一键生成消息类。如果存在多个 .proto 文件则会将消息生成在以 .proto 文件名命名的文件夹中。
 
-支持将生成的消息存在 Assets、Project 同级以及 Packages 文件夹中。他们的优越性在于生成在 Packages 文件夹中不会对用户工程目录有任何侵入性；存在 Project 同级目录将最大化消息文件在多个工程中的复用（本项目架构情形）。
+支持将生成的消息存在 Assets、Project 同级以及 Packages 文件夹中。他们的优越性在于生成在 Packages 文件夹中不会对用户工程目录有任何侵入性；存在 Project 同级目录将最大化的实现消息文件在多个工程中的复用（本项目架构情形）。
 
 
 ![](doc/editor.png)
 
 > 运行时参数配置界面
 
-提供了一个可以编辑器下修改运行时生效的配置界面，可以配置日志过滤器；心跳间隔和重试次数；同时也会自动记录消息处理器所在的程序集信息
+提供了一个可以编辑器下修改、运行时生效的配置界面，可以配置日志过滤器；心跳间隔和重试次数；同时也会自动记录消息处理器所在的程序集信息
 
 ![](doc/runtime.png)
 
@@ -63,7 +63,7 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
 * 使用  ``System.Reflection`` 命名空间下的 ``MethodInfo `` 配合 `` Delegate.CreateDelegate(typeof(Func<Session, TRequest, TResponse, Task>), method)`` 实现对 ``MessageHandlerAttribute(MessageType.RPC)`` 标注的 RPC 消息处理器的自动注册
 
-* 使用 ``MessageWrapper`` 记录消息的类型信息及其 Json 数据来实现通过 ``JsonUtility`` 也能实现多继承消息的序列化/反序列化
+* 使用 ``MessageWrapper`` 记录消息的类型信息及其 Json 数据来实现通过 ``JsonUtility`` 也能对多继承消息的序列化/反序列化
 
 # 安装
 
@@ -139,7 +139,7 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
  > RPC 消息发送
 
-下面是 Tiny RPC 发送 RPC 并等待回应的逻辑，同样，得益于 RPC 的使用，与服务器的对话再也不需要调用 监听者模式这种割裂的交互方式了（完善后的TinyRPC也支持监听模式，毕竟还有常规消息要处理嘛）
+下面是 TinyRPC 发送 RPC 并等待回应的逻辑，同样，得益于 RPC 的使用，与服务器的对话再也不需要调用 监听者模式这种割裂的交互方式了（TinyRPC也支持监听模式，毕竟还有常规消息要处理嘛）
 
 ```csharp
         public async void SendRPCAsync()
@@ -176,7 +176,7 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
 ### 消息处理
 
-在服务器端，我们使用了消息处理器来处理接收到的各类消息，Normal 消息、RPC 消息、Ping 消息。
+在服务器端，我们使用了消息处理器来处理接收到的各类消息：Normal 消息、RPC 消息、Ping 消息。
 
 当然，在客户端也支持通过注册消息处理器来处理 Normal 消息、RPC 消息 （Ping 消息除外）进而实现用户业务逻辑的展开。
 
@@ -199,7 +199,7 @@ private static async Task OnPingRecevied(Session session, Ping request, Ping res
 > RPC 消息处理器
 
 
-1. 下面的示例脚本中对使用 ``MessageHandlerProviderAttribute``、 ``MessageHandlerAttribute`` 声明 RPC 消息处理器
+1. 下面的示例脚本演示如何通过 ``MessageHandlerProviderAttribute``、 ``MessageHandlerAttribute`` 声明 RPC 消息处理器
 
 ```csharp
 [MessageHandlerProvider]
@@ -217,7 +217,7 @@ class Foo
 
 这个消息处理器收到 RPC 请求后，间隔了一秒钟，然后向请求端发出响应信息： “response  from  tinyrpc server ”。
 
-2. 下面示例脚本中演示使用 ``UnityEngine.Component.AddNetworkSignal<Session,TRequest,TResponse>()`` 注册 RPC 消息处理器
+2. 下面示例脚本中演示如何使用 ``UnityEngine.Component.AddNetworkSignal<Session,TRequest,TResponse>()`` 注册/注销 RPC 消息处理器
 
 ```csharp
 using System.Threading.Tasks;
@@ -241,7 +241,7 @@ public class Foo : MonoBehaviour
 
 > 普通消息处理器
 
-1. 下面的示例脚本中对使用 ``MessageHandlerProviderAttribute``、 ``MessageHandlerAttribute`` 声明普通消息处理器
+1. 下面的示例脚本中演示如何使用 ``MessageHandlerProviderAttribute``、 ``MessageHandlerAttribute`` 声明普通消息处理器
 
 ```csharp
 [MessageHandlerProvider]
@@ -257,7 +257,7 @@ class Foo
 
 这个消息处理器收到普通消息后，直接 log 输出到屏幕。
 
-2. 下面示例脚本中演示使用 ``UnityEngine.Component.AddNetworkSignal<Session,T>()`` 注册普通消息处理器
+2. 下面示例脚本中演示如何使用 ``UnityEngine.Component.AddNetworkSignal<Session,T>()`` 注册普通消息处理器
 
 ```csharp
 
@@ -464,7 +464,7 @@ Provides an interface for runtime configuration changes in the editor, allowing 
 
 3. Run the **Server** first; the server will be automatically created.
 
-4. Then run the **Client**. After clicking Play, you can connect/disconnect from the server in the Game window and test RPC sessions through SendRPC.
+4. Then run the **Client**. After clicking Play, you can connect/disconnect from the server in the Game window and test RPC sessions through SendRPC button.
 
 5. This project was developed using Unity 2021.3.11f2. Please use this version or a higher version.
 
@@ -512,7 +512,7 @@ Of course, you can also try-catch this logic to handle login failures. I won't w
 
 > RPC Message Sending
 
-Here is the logic for sending an RPC and waiting for a response in TinyRPC. Thanks to the use of RPC, communication with the server no longer requires using the observer pattern, which can be a fragmented interaction method (although the improved TinyRPC also supports observer mode, as there are regular messages to handle).
+Here is the logic for sending an RPC and waiting for a response in TinyRPC. Thanks to the use of RPC, communication with the server no longer requires using the observer pattern, which can be a fragmented interaction method (TinyRPC also supports observer mode, as there are regular messages to handle).
 
 ```csharp
 public async void SendRPCAsync()
