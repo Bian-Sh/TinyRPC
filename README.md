@@ -4,132 +4,62 @@ TinyRPC
 
 # TinyRPC
 
-TinyRPC 是一个使用 Socket + JsonUtility 的简易 RPC 框架。它的目标是提供一个轻量级、易于使用的 RPC 解决方案。
+TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 RPC 框架。
 
-## 项目介绍
+它的目标是提供一个轻量级、易于使用的 RPC 解决方案。
 
-TinyRPC 项目包含了一个使用 UPM （Unity PackageManager）管理的 RPC 插件，无第三方依赖。
+支持优雅的 ``async await`` 异步逻辑同步写的编码方式，让你的代码更加简洁易读。
 
-同时提供了 Unity 客户端和服务器的示例。这个示例展示了如何使用 TinyRPC 构建一个 Unity 客户端和服务器，包括如何连接到服务器，如何发送 RPC 请求，以及如何处理服务器的响应。
+客户端和服务器都支持发送 RPC 请求。
+
+当然，除了 RPC 消息，我还提供了普通消息的处理，这样你就可以在一个项目中同时使用 RPC 和普通消息了。
+
+这个网络框架很多地方学习参考了 [ET](https://github.com/egametang/ET) ，在此表示感谢。
+
+
+# 功能
+
+> 消息的发送
+
+* 使用 ``Send(message)`` 发送普通网络消息
+
+* 使用 ``var response =  await Call(request)`` 发送 RPC 请求并等待响应
+
+> 观察者模式注册的消息处理器
+
+* 使用 ``UnityEngine.Component.AddNetworkSignal<Session,T>()`` 注册一个普通的网络处理器
+
+* 使用 ``UnityEngine.Component.AddNetworkSignal<Session,TRequest,TResponse>()`` 注册一个 RPC 处理器
+
+> 通过反射自动注册消息处理器
+
+* 使用 ``[MessageHandlerProviderAttribute]`` 标记一个消息处理器容器（类型）
+* 使用 ``[MessageHandlerAttribute(MessageType.Normal)]`` 标记一个消息处理器
+* 使用 ``[MessageHandlerAttribute(MessageType.RPC)]`` 标记一个 RPC 消息处理器
+
+> 消息类一键生成
+
+使用基于 proto3 精简版语法的 .proto 文件，可以一键生成消息类。如果存在多个 .proto 文件则会将消息生成在 .proto 文件名命名的文件夹中。
+
+支持将生成的消息存在 Assets、Project 同级以及 Packages 文件夹中。他们的优越性在于生成在 Packages 文件夹中不会对用户工程目录有任何侵入性；存在 Project 同级目录将最大化消息文件在多个工程中的复用（本项目架构情形）。
+
+
+![](doc/editor.png)
+
+> 运行时参数配置界面
+
+提供了一个可以编辑器下修改运行时生效的配置界面，可以配置日志过滤器；心跳间隔和重试次数；同时也会自动记录消息处理器所在的程序集信息
+
+![](doc/runtime.png)
+
+
 
 ## RPC 原理
 
-TinyRPC 使用 `MessageManager` 来处理所有的消息。对于普通消息，`MessageManager` 会查找对应的消息处理器并调用它。对于 RPC 请求，`MessageManager` 会创建一个新的任务并等待响应。一旦收到响应，`MessageManager` 会完成任务并移除它。
+新版本的 Unity 对 Task 的支持越来越完备，TinyRPC 使用 ``System.Threading.Tasks`` 命名空间下的 ``TaskCompletionSource`` 来实现 RPC 的异步等待。
 
-```csharp
-internal static async void HandleRpcRequest(Session session, IRequest request)
-{
-    if (rpcHandlers.TryGetValue(request.GetType(), out var info))
-    {
-        if (rpcMessagePairs.TryGetValue(info.Request, out var responseType))
-        {
-            var response = Activator.CreateInstance(responseType) as IResponse;
-            response.Id = request.Id;
-            var task = info.method.Invoke(null, new object[] { session, request, response });
-            await (task as Task);
-            session.Reply(response);
-            return;
-        }
-    }
-    var response_fallback = new Response
-    {
-        Id = request.Id,
-        Error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！"
-    };
-    session.Reply(response_fallback);
-}
+使用  ``System.Threading.Tasks`` 命名空间下的 ``CancellationTokenSource.CancelAfter(delay)`` 来实现 RPC 的超时控制。
 
-internal static void HandleRpcResponse(Session session, IResponse response)
-{
-    if (rpcInfoPairs.TryGetValue(response.Id, out var rpcInfo))
-    {
-        rpcInfo.task.SetResult(response);
-        rpcInfoPairs.Remove(response.Id);
-    }
-}
-```
-
-在 `Session` 类中处理分包粘包的问题和消息的发送与接受，使用了以下关键代码来处理封包和接收到的消息：
-
-```csharp
-public async void ReceiveAsync()
-{
-    var stream = client.GetStream();
-    while (!source.IsCancellationRequested)
-    {
-        // 读出消息的长度
-        var head = new byte[4];
-        var byteReaded = await stream.ReadAsync(head, 0, head.Length, source.Token);
-        if (byteReaded == 0)
-        {
-            throw new Exception("断开连接！");
-        }
-        // 读出消息的内容
-        var bodySize = BitConverter.ToInt32(head, 0);
-        var body = new byte[bodySize];
-        byteReaded = 0;
-        // 当读取到 body size 后的数据读取需要加入超时检测
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromSeconds(20));
-        while (byteReaded < bodySize)
-        {
-            var readed = await stream.ReadAsync(body, byteReaded, body.Length - byteReaded, cts.Token);
-            // 读着读着就断线了的情况，如果不处理，此处会产生死循环
-            if (readed == 0)
-            {
-                throw new Exception("断开连接！");
-            }
-            byteReaded += readed;
-        }
-        if (bodySize != byteReaded) // 消息不完整，此为异常，断开连接
-        {
-            throw new Exception("消息不完整,会话断开！");
-        }
-        // 解析消息类型
-        var type = body[0];
-        var content = new byte[body.Length - 1];
-        Array.Copy(body, 1, content, 0, content.Length);
-        OnMessageReceived(type, content);
-    }
-}
-```
-
-在 Session 中对接收到的消息做层别并使用给自的消息处理器来处理，逻辑如下
-
-```csharp
-private void OnMessageReceived(byte type, byte[] content)
-{
-    lastPingReceiveTime = DateTime.Now;
-
-    var message = SerializeHelper.Deserialize(content);
-    if (!TinyRpcSettings.Instance.LogFilters.Contains(message.GetType().FullName))
-    {
-        Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 =  {JsonUtility.ToJson(message)}");
-    }
-    switch (type)
-    {
-        case 0: //normal message
-            {
-                context.Post(_ => HandleNormalMessage(this, message), null);
-            }
-            break;
-        case 1: // rpc message
-            {
-                if (message is Request || (message is Ping && IsServerSide))
-                {
-                    context.Post(_ => HandleRpcRequest(this, message as IRequest), null);
-                }
-                else if (message is Response || (message is Ping && !IsServerSide))
-                {
-                    context.Post(_ => HandleRpcResponse(this, message as IResponse), null);
-                }
-            }
-            break;
-        default:                                                                                                                                                                                                                                                            
-            break;
-    }
-}
-```
 
 ## 安装和设置
 
@@ -143,19 +73,25 @@ private void OnMessageReceived(byte type, byte[] content)
 
 ## 快速开始
 
-### 客户端
+### 登录、消息发送
 
 在 Unity 客户端中，我们使用了以下关键 API：
 
 - `client.ConnectAsync()`: 这个方法用于连接到服务器。
-- `client.Call<TestRPCResponse>(request)`: 这个方法用于发送一个 RPC 请求并等待响应。
+- `client.Send(message)`: 这个方法用于发送一个普通消息。
+- `await client.Call<TestRPCResponse>(request)`: 这个方法用于发送一个 RPC 请求并等待响应。
 
-下面是 TinyRPC 链接服务器的测试代码,这个逻辑通过模拟网络不好情况下的登录表现，展示了如果通过 async 异步对登录流程的优雅控制。
+> 登录逻辑
+
+下面是 TinyRPC 连接服务器逻辑 
+
+也模拟了网络不好情况下的登录表现，展示了如何通过 async 异步对登录流程的优雅控制。
 
 ```csharp
   private async void StartConnectAsync()
   {
       connect.interactable = false;
+
       //模拟网络延迟情况下的登录
       //1. 显示登录中...
       var tcs = new CancellationTokenSource();
@@ -168,15 +104,18 @@ private void OnMessageReceived(byte type, byte[] content)
 
       //3. 取消登录中...的显示
       tcs.Cancel();
-      Debug.Log($"{nameof(TestClient)}:  Thread id = {Thread.CurrentThread.ManagedThreadId}");
+
       //4. 转换 connect 字样为 disconnect
       connect.GetComponentInChildren<Text>().text = "Disconnect";
       connect.interactable = true;
-      Debug.Log($"{nameof(TestClient)}: Client Started");
   }
 ```
 
-> 这段逻辑中，我使用 Task.WhenAll + Task.Delay 实现了一个长时间的登录效果，这样文本组件就有足够时间展示 Connect... 动画了，当登录完成，就将文本改为 Disconnect，方便下个回合的交互。
+ 这段逻辑中，我使用 Task.WhenAll + Task.Delay 实现了一个长时间的登录效果，这样文本组件就有足够时间展示 Connect... 动画了，当登录完成，就将文本改为 Disconnect，方便下个回合的交互。
+
+ 当然，你还可以对这段逻辑 Try Catch，处理登录失败的情况，这里我就不誊写啦，更多交互细节请运行示例项目体验。
+
+ > RPC 消息发送
 
 下面是 Tiny RPC 发送 RPC 并等待回应的逻辑，同样，得益于 RPC 的使用，与服务器的对话再也不需要调用 监听者模式这种割裂的交互方式了（完善后的TinyRPC也支持监听模式，毕竟还有常规消息要处理嘛）
 
@@ -187,39 +126,63 @@ private void OnMessageReceived(byte type, byte[] content)
             {
                 var request = new TestRPCRequest();
                 request.name = "request from tinyrpc client";
-                var time = Time.realtimeSinceStartup;
-                Debug.Log($"{nameof(TestClient)}: Send Test RPC Request ！");
                 var response = await client.Call<TestRPCResponse>(request);
-                Debug.Log($"{nameof(TestClient)}: Receive RPC Response ：{response.name}  , cost = {Time.realtimeSinceStartup - time}");
-            }
-            else
-            {
-                Debug.LogWarning($"{nameof(TestClient)}: Please Connect Server First！");
             }
         }
 ```
 
-> 这段逻辑中，我先构建了一个请求，并告知服务请求的信息，接着等待服务器返回的数据，然后 log 输出到屏幕，
+ 这段逻辑中，我先构建了一个请求，并告知服务请求的信息，接着等待服务器返回的数据，然后 log 输出到屏幕，
 
-### 服务器
+ > 常规消息发送
 
-在服务器端，我们使用了消息处理器来处理接收到的各类消息，下面是 Ping 消息的处理逻辑，你可以参考它实现自己的消息处理器
+下面是 Tiny RPC 发送常规消息的逻辑，构建一个 Normal 消息，调用 Send 就好啦。
+
+```csharp
+        private void SendNormalMessage()
+        {
+            if (client != null && client.IsConnected)
+            {
+                var message = new TestMessage
+                {
+                    message = "normal message from tinyrpc client",
+                    age = 999
+                };
+                client.Send(message);
+            }
+        }
+```
+
+### 消息处理
+
+在服务器端，我们使用了消息处理器来处理接收到的各类消息，Normal 消息、RPC 消息、Ping 消息。
+
+当然，在客户端也支持通过注册消息处理器对 Normal 消息、RPC 消息的处理 （Ping 消息除外），处理用户收到网络消息后的业务逻辑。
+
+
+> Ping 消息处理器
+
+Ping 消息是一个内置的自响应消息，交由系统自己处理，用户无需关注
 
 ```csharp
 #region Ping Message Handler 
-[MessageHandler(MessageType.RPC)] 
 private static async Task OnPingRecevied(Session session, Ping request, Ping response) 
 { 
-response.Id = request.Id; 
-response.time = ServerTime; 
-await Task.Yield(); 
+    response.Id = request.Id; 
+    response.time = ServerTime; 
+    await Task.Yield(); 
 } 
 #endregion 
 ```
 
- TestServer 示例脚本中对声明的消息处理器的逻辑是一个很好的参考，这个逻辑输出了请求的细节，再间隔一秒钟后发出响应。
+> RPC 消息处理器
+
+
+1. 下面的示例脚本中对使用 ``MessageHandlerProviderAttribute``、 ``MessageHandlerAttribute`` 声明 RPC 消息处理器
 
 ```csharp
+[MessageHandlerProvider]
+class Foo
+{
     [MessageHandler(MessageType.RPC)]
     private static async Task RPCMessageHandler(Session session, TestRPCRequest request, TestRPCResponse response)
     {
@@ -227,77 +190,166 @@ await Task.Yield();
         await Task.Delay(1000);
         response.name = "response  from  tinyrpc server !";
     }
+}
 ```
 
-> 请注意，注册消息处理器需要给函数标记 ``MessageHandlerAttribute`` ，同时给消息处理器所在的类型加上 ``MessageHandlerProviderAttribute``
+这个消息处理器收到 RPC 请求后，间隔了一秒钟，然后向请求端发出响应信息： “response  from  tinyrpc server ”。
 
-# 文件系统
+2. 下面示例脚本中演示使用 ``UnityEngine.Component.AddNetworkSignal<Session,TRequest,TResponse>()`` 注册 RPC 消息处理器
 
-下面是 TinyRPC 的文件系统树，可以看到基础架构
+```csharp
+using System.Threading.Tasks;
+using UnityEngine;
+using zFramework.TinyRPC;
+using zFramework.TinyRPC.Generated;
+
+public class Foo : MonoBehaviour
+{
+    private void OnEnable()=>this.AddNetworkSignal<TestRPCRequest, TestRPCResponse>(RPCMessageHandler);
+
+    private void OnDisable()=>this.RemoveNetworkSignal<TestRPCRequest, TestRPCResponse>(RPCMessageHandler);
+    
+    private static async Task RPCMessageHandler(Session session, TestRPCRequest request, TestRPCResponse response)
+    {
+        await Task.Delay(500);
+        response.name = $"response  from  tinyrpc {(session.IsServerSide ? "SERVER" : "CLIENT")}  !";
+    }
+}
+```
+
+> 普通消息处理器
+
+1. 下面的示例脚本中对使用 ``MessageHandlerProviderAttribute``、 ``MessageHandlerAttribute`` 声明普通消息处理器
+
+```csharp
+[MessageHandlerProvider]
+class Foo
+{
+	[MessageHandler(MessageType.Normal)]
+	private static void NormalMessageHandler(Session session, TestMessage message)
+	{
+		Debug.Log($"{nameof(TestServer)}: Receive {session} message {message}");
+	}
+}
+```
+
+这个消息处理器收到普通消息后，直接 log 输出到屏幕。
+
+2. 下面示例脚本中演示使用 ``UnityEngine.Component.AddNetworkSignal<Session,T>()`` 注册普通消息处理器
+
+```csharp
+
+using UnityEngine;
+using zFramework.TinyRPC;
+using zFramework.TinyRPC.Generated;
+
+public class Foo: MonoBehaviour
+{
+    private void OnEnable()=>this.AddNetworkSignal<TestMessage>(OnTestMessageReceived);
+
+    private void OnDisable()=>this.RemoveNetworkSignal<TestMessage>(OnTestMessageReceived);
+
+    private void OnTestMessageReceived(Session session, TestMessage message)
+    {
+        Debug.Log($"获取到{(session.IsServerSide ? "客户端" : "服务器")}  {session}  的消息, message = {message}");
+    }
+}
+```
+
+
+# 框架架构
+
+下面是 TinyRPC 的文件系统树，点击可以看到完整网络架构
+
+<details>
+<summary>  点我 ^_^</summary>
 
 ```
-卷 数据 的文件夹 PATH 列表
-卷序列号为 0E4D-4592
-E:.
-|   1.txt
-|   FileTree.bat
-|   package.json
-|   temp.txt
-|   
+<root>
 +---Editor
-|   |   com.zframework.tinyrpc.editor.asmdef
-|   |   Temp.cs
 |   |   
 |   +---Analyzer
-|   |       .gitkeep
+|   |       MessageHandlerPostprocessor.cs
+|   |       
+|   +---CodeGen
+|   |       ProtoContentProcessor.cs
+|   |       TinyProtoHandler.cs
 |   |       
 |   +---Data
-|   |       .gitkeep
+|   |       ScriptInfo.cs
+|   |       ScriptType.cs
 |   |       
-|   \---GUI
-|           .gitkeep
+|   +---GUI
+|   |       EditorSettingsLayout.cs
+|   |       RuntimeSettingsLayout.cs
+|   |       TinyRpcEditorWindow.cs
+|   |       
+|   \---Settings
+|           EditorSettingWatcher.cs
+|           ScriptableSingleton.cs
+|           TinyRpcEditorSettings.cs
 |           
 \---Runtime
-    |   com.zframework.tinyrpc.runtime.asmdef
-    |   TCPServer.cs
-    |   TinyClient.cs
     |   
-    +---Exception
-    |       RpcException.cs
-    |       TimeoutException.cs
-    |       
-    +---Internal
+    +---Data
+    |       MessageType.cs
+    |       MessageWrapper.cs
     |       RpcInfo.cs
     |       SerializeHelper.cs
-    |       Session.cs
+    |       TinyRpcSettings.cs
     |       
-    +---Message
-    |   |   MessageHandlerAttribute.cs
-    |   |   MessageHandlerProviderAttribute.cs
-    |   |   MessageManager.cs
-    |   |   MessageType.cs
-    |   |   MessageWrapper.cs
+    +---Exception
+    |       InvalidSessionException.cs
+    |       RpcResponseException.cs
+    |       RpcTimeoutException.cs
+    |       
+    +---Handler
     |   |   
     |   +---Attribute
-    |   |       BaseAttribute.cs
-    |   |       MessageAttribute.cs
-    |   |       ResponseTypeAttribute.cs
+    |   |       MessageHandlerAttribute.cs
+    |   |       MessageHandlerProviderAttribute.cs
     |   |       
     |   +---Base
-    |   |       Message.cs
-    |   |       Ping.cs
-    |   |       Request.cs
-    |   |       Response.cs
+    |   |       NormalMessageHandler.cs
+    |   |       RpcMessageHandler.cs
+    |   |       
+    |   +---Extension
+    |   |       MessageHandlerEx.cs
     |   |       
     |   \---Interface
-    |           IMessage.cs
-    |           IRequest.cs
-    |           IResponse.cs
+    |           INormalMessageHandler.cs
+    |           IRpcMessageHandler.cs
     |           
-    \---Setting
-            TinyRpcSettings.cs
+    +---Internal
+    |       Manager.cs
+    |       Session.cs
+    |       TinyClient.cs
+    |       TinyServer.cs
+    |       
+    \---Message
+        |   
+        +---Attribute
+        |       ResponseTypeAttribute.cs
+        |       
+        +---Base
+        |       Message.cs
+        |       Ping.cs
+        |       Request.cs
+        |       Response.cs
+        |       
+        \---Interface
+                IMessage.cs
+                IRequest.cs
+                IResponse.cs
+                IRpcMessage.cs
+                
 ```
+</details>
 
 ## 贡献指南
 
-目前这个插件正在开发中，如果你有任何问题或建议，欢迎提交 issue 或 pull request。
+如果你有任何问题或建议，欢迎提交 issue 或 pull request。
+
+## License
+
+遵循 MIT 开源协议
