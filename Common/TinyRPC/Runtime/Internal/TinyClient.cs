@@ -113,7 +113,10 @@ namespace zFramework.TinyRPC
                 try
                 {
                     var begin = DateTime.Now;
-                    var response = await Call<Ping>(new Ping());
+                    var pooled = ObjectPool.Allocate<Ping>();
+                    var response = await Call<Ping>(pooled);
+                    ObjectPool.Recycle(pooled);
+
                     var end = DateTime.Now;
                     var ping = (end - begin).Milliseconds;
                     // 服务器与客户端的时间差，用于在客户端上换算服务器时间

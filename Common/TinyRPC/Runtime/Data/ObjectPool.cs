@@ -34,11 +34,6 @@ namespace zFramework.TinyRPC
             if (items.IsEmpty || !items.TryPop(out T item))
             {
                 item = new T();
-                UnityEngine.Debug.Log($"{nameof(ObjectPool)}: New Instance !");
-            }
-            else
-            {
-                UnityEngine.Debug.Log($"{nameof(ObjectPool)}: From Pool ， count =  {items.Count}!");
             }
             return item;
         }
