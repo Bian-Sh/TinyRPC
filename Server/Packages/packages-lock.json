@@ -174,7 +174,7 @@
       "dependencies": {}
     },
     "com.zframework.tinyrpc.generated": {
-      "version": "file:./../../Common/TinyRPC Generated",
+      "version": "file:../../Common/TinyRPC Generated",
       "depth": 0,
       "source": "local",
       "dependencies": {}

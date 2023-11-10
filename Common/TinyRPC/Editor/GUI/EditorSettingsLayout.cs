@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEditor.PackageManager;
@@ -249,13 +250,15 @@ namespace zFramework.TinyRPC.Editor
                 _ => "Assets/TinyRPC/Generated",
             };
 
+            if (settings.protos.Count(p => p != null) == 0)
+            {
+                throw new Exception("请先选择 .proto 文件！");
+            }
+
             if (!Directory.Exists(newLocation))
             {
                 Directory.CreateDirectory(newLocation);
             }
-
-            TryCreatePackageJsonFile(newLocation);
-            TryCreateAssemblyDefinitionFile(newLocation);
             var protos = settings.protos;
             foreach (var proto in protos)
             {
@@ -266,6 +269,8 @@ namespace zFramework.TinyRPC.Editor
                     TinyProtoHandler.Proto2CS(proto.name, protoContent, newLocation);
                 }
             }
+            TryCreatePackageJsonFile(newLocation);
+            TryCreateAssemblyDefinitionFile(newLocation);
         }
         private void RemovePrevioursPackageEntity()
         {
@@ -361,9 +366,8 @@ namespace zFramework.TinyRPC.Editor
                 if (string.IsNullOrEmpty(relatedPath))
                 {
                     var fileName = Path.GetFileName(path);
-                    var destPath = $"{ProtoLocation}/{fileName}";
-                    File.Copy(path, destPath, true);
-                    relatedPath = FileUtil.GetProjectRelativePath(destPath);
+                    relatedPath = $"{ProtoLocation}/{fileName}";
+                    File.Copy(path, relatedPath, true);
                     AssetDatabase.Refresh();
                 }
                 var proto = AssetDatabase.LoadAssetAtPath<DefaultAsset>(relatedPath);
