@@ -13,7 +13,8 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
 * 支持常规网络消息的收发
 
-
+* 支持基于事件的完善的网络通信生命周期管理，断线即刻感知。
+  
 # 功能
 
 > 消息的发送
@@ -191,7 +192,7 @@ private static async Task OnPingRecevied(Session session, Ping request, Ping res
 { 
     response.Id = request.Id; 
     response.time = ServerTime; 
-    await Task.Yield(); 
+    await Task.CompletedTask(); 
 } 
 #endregion 
 ```
@@ -563,7 +564,7 @@ private static async Task OnPingRecevied(Session session, Ping request, Ping res
 { 
     response.Id = request.Id; 
     response.time = ServerTime; 
-    await Task.Yield(); 
+    await Task.CompletedTask(); 
 } 
 #endregion 
 ```

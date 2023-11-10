@@ -14,8 +14,7 @@ namespace zFramework.TinyRPC
     // 对外：Start 、Stop  、Send
     // 对内：AcceptAsync 、Receive
     // 事件：当握手完成，当用户断线 、当服务器断线
-    // 消息结构：size + body（type+content） 4 + 1 + body , type =  0 代表 ping , 1 代表常规 message ， 2 代表 rpc message
-    // 会话：Session = TcpClient + lastSendTime + lastReceiveTime 
+    // 消息结构：size + body（type+content） 4 + 1 + body , type = 0 代表常规 message ， 1 代表 rpc message
     public class TinyServer
     {
         public event Action<Session> OnClientEstablished;

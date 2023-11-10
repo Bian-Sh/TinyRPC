@@ -53,7 +53,7 @@ namespace zFramework.TinyRPC
                      Session = new Session(client, context, false);
                      context.Post(v => OnClientEstablished?.Invoke(), null);
                      _ = Task.Run(ReceiveAsync);
-                     context.Post(v => _ = PingAsync(), null);// ping 在主线程上下文执行 ,避免多线程导致各种资源竞争
+                     context.Post(v => _ = PingAsync(), null);
                      return true;
                  }
                  catch (Exception e)
@@ -119,7 +119,7 @@ namespace zFramework.TinyRPC
                     // 服务器与客户端的时间差，用于在客户端上换算服务器时间
                     var delta = (response.time - ClientTime) / 10000.0f + ping / 2;
                     OnPingCaculated?.Invoke(delta, ping);
-                    await Task.Delay(TinyRpcSettings.Instance.pingInterval);
+                    await Task.Delay(TinyRpcSettings.Instance.pingInterval);//这个API 决定了必须在主线程调用
                 }
                 // 只有当收到的异常是 RpcResponseException  或者 TimeoutException 时才重试
                 catch (Exception e) when (e is RpcResponseException || e is TimeoutException)
