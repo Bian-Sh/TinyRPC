@@ -28,5 +28,16 @@ namespace zFramework.TinyRPC.Messages
             Type t = asm.GetType(type);
             Message = (IMessage)JsonUtility.FromJson(data, t);
         }
+
+        public override string ToString() 
+        {
+            var info = nameof(MessageWrapper);
+            var fields = GetType().GetFields();
+            foreach (var field in fields)
+            {
+                info += $"{field.Name} = {field.GetValue(this)}\n";
+            }
+            return info;
+        }
     }
 }
