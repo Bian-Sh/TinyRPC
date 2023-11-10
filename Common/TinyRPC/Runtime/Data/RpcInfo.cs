@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using zFramework.TinyRPC.Messages;
 
 namespace zFramework.TinyRPC
@@ -7,5 +8,6 @@ namespace zFramework.TinyRPC
     {
         public int id;
         public TaskCompletionSource<IResponse> task;
+        public CancellationTokenSource source;
     }
 }

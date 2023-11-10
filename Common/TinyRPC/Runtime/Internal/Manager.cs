@@ -283,6 +283,7 @@ namespace zFramework.TinyRPC
         {
             if (rpcInfoPairs.TryGetValue(response.Rid, out var rpcInfo))
             {
+                rpcInfo.source.Dispose();
                 rpcInfo.task.SetResult(response);
                 rpcInfoPairs.Remove(response.Rid);
             }
@@ -296,11 +297,16 @@ namespace zFramework.TinyRPC
             var timeout = Mathf.Max(request.Timeout, TinyRpcSettings.Instance.rpcTimeout);
             cts.CancelAfter(timeout);
             var exception = new TimeoutException($"RPC Call Timeout! Request: {request}");
-            cts.Token.Register(() => tcs.TrySetException(exception), useSynchronizationContext: false);
+            cts.Token.Register(() =>
+            {
+                rpcInfoPairs.Remove(request.Rid);
+                tcs.TrySetException(exception);
+            }, useSynchronizationContext: false);
             var rpcinfo = new RpcInfo
             {
                 id = request.Rid,
                 task = tcs,
+                source = cts
             };
             rpcInfoPairs.Add(request.Rid, rpcinfo);
             return tcs.Task;
