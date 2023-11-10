@@ -8,7 +8,7 @@ namespace zFramework.TinyRPC.Editor
     public class TinyRpcEditorSettings : ScriptableSingleton<TinyRpcEditorSettings>
     {
         public List<DefaultAsset> protos;
-        public string generatedScriptLocation;
+        public string generatedScriptLocation= "Packages/TinyRPC Generated";
         public bool indentWithTab;
         //消息存 Project 同级目录时允许新增父节点
         //比如：Project/../Common/TinyRPC Generated 
