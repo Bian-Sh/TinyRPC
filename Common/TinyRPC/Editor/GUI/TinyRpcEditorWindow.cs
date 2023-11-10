@@ -62,14 +62,7 @@ namespace zFramework.TinyRPC.Editor
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUILayout.FlexibleSpace();
-                var idx = EditorPrefs.GetInt(key, 0);
-                selected = GUILayout.Toolbar(idx, toolbarContents, GUILayout.Height(EditorGUIUtility.singleLineHeight * 1.2f));
-
-                if (selected != idx)
-                {
-                    idx = selected;
-                    EditorPrefs.SetInt(key, idx);
-                }
+                selected = GUILayout.Toolbar(selected, toolbarContents, GUILayout.Height(EditorGUIUtility.singleLineHeight * 1.2f));
                 GUILayout.FlexibleSpace();
             }
             GUILayout.Space(15);
@@ -88,7 +81,6 @@ namespace zFramework.TinyRPC.Editor
         #region GUIContents for tabs
         static GUIContent BT_LT = new GUIContent("Editor", "编辑器下使用的配置");
         static GUIContent BT_RT = new GUIContent("Runtime", "运行时使用的配置");
-        const string key = "TinyRPC Tab Index";
         #endregion
     }
 }
