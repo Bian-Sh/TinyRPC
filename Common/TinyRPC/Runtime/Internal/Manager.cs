@@ -58,7 +58,7 @@ namespace zFramework.TinyRPC
                     if (attr.type == MessageType.RPC)
                     {
                         var parameters = method.GetParameters();
-                        if (parameters.Length > 1)
+                        if (parameters.Length == 3)
                         {
                             // validate parameter , they are must be Session + IRequest + IResponse and return Task
                             var session = parameters[0];
@@ -100,13 +100,13 @@ namespace zFramework.TinyRPC
                         }
                         else
                         {
-                            Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 至少有 2 个参数！");
+                            Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} RPC 消息处理器注册失败，参数数量不匹配！");
                         }
                     }
                     else if (attr.type == MessageType.Normal)
                     {
                         var parameters = method.GetParameters();
-                        if (parameters.Length > 1)
+                        if (parameters.Length == 2)
                         {
                             // validate parameter , they are must be Session + IMessage and return void
                             var session = parameters[0];
@@ -135,7 +135,7 @@ namespace zFramework.TinyRPC
                         }
                         else
                         {
-                            Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 至少有 2 个参数！");
+                            Debug.LogError($"{nameof(Manager)}: {handlerProvider.Name}.{method.Name} 常规消息处理器注册失败，参数数量不匹配！");
                         }
                     }
                 }
