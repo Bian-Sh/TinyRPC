@@ -14,6 +14,7 @@ namespace zFramework.TinyRPC.Editor
         SerializedProperty assemblyNames; //where handlers located
         SerializedProperty logFilters; //log filters, such as ping etc. in case of too many logs at a time
         SerializedProperty logEnabled;
+        Vector2 scrollPos;
 
         public RuntimeSettingsLayout(EditorWindow window)
         {
@@ -22,6 +23,7 @@ namespace zFramework.TinyRPC.Editor
         internal void OnEnable()
         {
             editor = UnityEditor.Editor.CreateEditor(TinyRpcSettings.Instance);
+
             assemblyNames = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.assemblyNames));
             logFilters = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.logFilters));
             pingInterval = editor.serializedObject.FindProperty(nameof(TinyRpcSettings.pingInterval));
@@ -48,11 +50,16 @@ namespace zFramework.TinyRPC.Editor
             EditorGUILayout.Space(4);
             EditorGUILayout.PropertyField(logEnabled);
             EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField(asmNameContent, EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(assemblyNames);
-            EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField(logFilterContent, EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(logFilters);
+
+            using (var scroll = new EditorGUILayout.ScrollViewScope(scrollPos))
+            {
+                EditorGUILayout.LabelField(asmNameContent, EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(assemblyNames);
+                EditorGUILayout.Space(4);
+                EditorGUILayout.LabelField(logFilterContent, EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(logFilters);
+                scrollPos = scroll.scrollPosition;
+            }
 
             if (changeScope.changed)
             {

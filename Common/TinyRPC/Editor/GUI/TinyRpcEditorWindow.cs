@@ -21,14 +21,17 @@ namespace zFramework.TinyRPC.Editor
         [MenuItem("TinyRPC/Tool and Settings")]
         public static void ShowWindow() => GetWindow(typeof(TinyRpcEditorWindow));
 
-        public void OnEnable()
+        private void Awake()
         {
             // title with version
             var package = PackageInfo.FindForAssembly(typeof(TinyRpcEditorWindow).Assembly);
             var version = package.version;
             titleContent = new GUIContent($"TinyRPC (v{version})");
-            minSize = new Vector2(360, 220);
+            minSize = new Vector2(460, 420);
+        }
 
+        public void OnEnable()
+        {
             //init layout instance
             runtimeSettingsLayout ??= new RuntimeSettingsLayout(this);
             editorSettingsLayout ??= new EditorSettingsLayout(this);
