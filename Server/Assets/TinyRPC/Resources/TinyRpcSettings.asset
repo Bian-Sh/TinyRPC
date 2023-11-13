@@ -12,7 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 981c30201b2a4c2479597fd7670a9ac6, type: 3}
   m_Name: TinyRpcSettings
   m_EditorClassIdentifier: 
-  AssemblyNames:
+  assemblyNames:
   - Assembly-CSharp
-  LogFilters:
-  - zFramework.TinyRPC.Ping
+  logFilters:
+  - Ping
+  pingInterval: 1000
+  pingRetry: 3
+  rpcTimeout: 5000
+  logEnabled: 0

@@ -1,6 +1,6 @@
 namespace zFramework.TinyRPC.Messages
 {
-    public interface IMessage
+    public interface IMessage:IReusable
     {
     }
 }

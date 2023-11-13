@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using UnityEngine;
 
 namespace zFramework.TinyRPC.Messages
@@ -17,6 +16,14 @@ namespace zFramework.TinyRPC.Messages
         public int Rid { get => rid; set => rid = value; }
         /// <inheritdoc/>
         public int Timeout { get => timeout; set => timeout = value; }
+
+        public bool IsRecycled { get; set; }
+        public virtual void OnRecycle()
+        {
+            IsRecycled = true;
+            rid = default;
+            timeout = default;
+        }
         public override string ToString() => JsonUtility.ToJson(this);
     }
 }

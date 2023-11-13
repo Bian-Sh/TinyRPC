@@ -33,36 +33,21 @@ namespace zFramework.TinyRPC
             IsAlive = true;
         }
 
-        private void Send(MessageType type, byte[] content)
+        internal void Send(IMessage message)
         {
+            var bytes = SerializeHelper.Serialize(message);
             if (IsAlive)
             {
                 var stream = client.GetStream();
-                var body = new byte[content.Length + 1];
-                body[0] = (byte)type;
-                Array.Copy(content, 0, body, 1, content.Length);
-                var head = BitConverter.GetBytes(body.Length);
+                var head = BitConverter.GetBytes(bytes.Length);
                 stream.Write(head, 0, head.Length);
-                stream.Write(body, 0, body.Length);
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Flush();
             }
             else
             {
                 Debug.LogWarning($"{nameof(Session)}: 消息发送失败，会话已失效！");
             }
-        }
-
-        internal void Send(IMessage message)
-        {
-            var bytes = SerializeHelper.Serialize(message);
-            var messageType = message switch
-            {
-                IRequest => MessageType.RPC,
-                IResponse => MessageType.RPC,
-                // 其他的均为常规消息
-                // otherwise you get a normal message
-                _ => MessageType.Normal
-            };
-            Send(messageType, bytes);
         }
 
         internal void Reply(IMessage message) => Send(message);
@@ -80,10 +65,10 @@ namespace zFramework.TinyRPC
             Interlocked.CompareExchange(ref id, 0, int.MaxValue);
             request.Rid = Interlocked.Increment(ref id);
 
-            var bytes = SerializeHelper.Serialize(request);
-            Send(MessageType.RPC, bytes);  // do not catch any exception here,jut let it throw out
+            Send(request);  // do not catch any exception here,jut let it throw out
+            var response = await RpcWaitingTask(request);
+            Recycle(request); // after waiting task, recycle request 
 
-            var response = await AddRpcTask(request);
             if (!string.IsNullOrEmpty(response.Error))// 如果服务器告知了错误！
             {
                 throw new RpcResponseException($"Rpc Handler Error :{response.Error}");
@@ -109,7 +94,9 @@ namespace zFramework.TinyRPC
                 byteReaded = 0;
                 // 当读取到 body size 后的数据读取需要加入超时检测
                 var cts = new CancellationTokenSource();
-                cts.CancelAfter(TimeSpan.FromSeconds(20));
+                // 8s 超时，8秒可以读到的数据量是惊人的
+                // 如果超时，说明要么断线，要么是对方恶意发来的数据，直接断开连接
+                cts.CancelAfter(TimeSpan.FromSeconds(8));
                 while (byteReaded < bodySize)
                 {
                     var readed = await stream.ReadAsync(body, byteReaded, body.Length - byteReaded, cts.Token);
@@ -125,38 +112,33 @@ namespace zFramework.TinyRPC
                     throw new Exception("在读取网络消息时得到了不完整数据,会话断开！");
                 }
                 // 解析消息类型
-                var type = body[0];
-                var content = new byte[body.Length - 1];
-                Array.Copy(body, 1, content, 0, content.Length);
-                context.Post(_ => OnMessageReceived(type, content), null);
+                context.Post(_ => OnMessageReceived(body), null);
             }
         }
 
-        private void OnMessageReceived(byte type, byte[] content)
+        private void OnMessageReceived(byte[] content)
         {
             var message = SerializeHelper.Deserialize(content);
-            if (!TinyRpcSettings.Instance.logFilters.Contains(message.GetType().FullName)) //Settings can only be created in main thread
+            if (!TinyRpcSettings.Instance.logFilters.Contains(message.GetType().Name)) //Settings can only be created in main thread
             {
-                Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 =  {JsonUtility.ToJson(message)}");
+                Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 =  {message}");
             }
-            switch (type)
+            // rpc message
+            if (message is Request || (message is Ping && IsServerSide))
             {
-                case 0: //normal message
-                    HandleMessage(this, message);
-                    break;
-                case 1: // rpc message
-                    if (message is Request || (message is Ping && IsServerSide))
-                    {
-                        HandleRequest(this, message as IRequest);
-                    }
-                    else if (message is Response || (message is Ping && !IsServerSide))
-                    {
-                        HandleResponse(message as IResponse);
-                    }
-                    break;
-                default:
-                    break;
+                HandleRequest(this, message as IRequest);
             }
+            else if (message is Response || (message is Ping && !IsServerSide))
+            {
+                HandleResponse(message as IResponse);
+            }
+            else
+            {
+                //normal message
+                HandleMessage(this, message);
+            }
+            // request 可能需要延时回收
+            Recycle(message);
         }
         public override string ToString() => $"Session: {IPEndPoint}  IsServer:{IsServerSide}";
         public void Close()

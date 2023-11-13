@@ -21,14 +21,16 @@ namespace zFramework.TinyRPC
     {
         internal static readonly Dictionary<Type, INormalMessageHandler> NormalMessageHandlers = new();
         internal static readonly Dictionary<Type, IRpcMessageHandler> RpcMessageHandlers = new();
+        internal static readonly Dictionary<string, Type> MessageNameTypePairs = new(); // 记录了全部消息类型，key = 消息Type名，value = 消息类型
         static readonly Dictionary<Type, Type> rpcMessagePairs = new(); // RPC 消息对，key = Request , value = Response
         static readonly Dictionary<int, RpcInfo> rpcInfoPairs = new(); // RpcId + RpcInfo
+        static readonly ObjectPool Pool = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
         public static void Awake()
         {
             // regist rpc message pairs must before RegistGeneratedMessageHandlers
-            RegistRPCMessagePairs();
+            RegistMessagePairs();
             RegistMessageHandlers();
             // if user has regist attribute marked handler task , then regist them
             RegistAttributeMarkedHandlerTask();
@@ -190,12 +192,22 @@ namespace zFramework.TinyRPC
             }
         }
 
-        public static void RegistRPCMessagePairs()
+        #region ObjectPool 
+        public static T Allocate<T>() where T : class, IReusable => Pool.Allocate<T>();
+        public static IReusable Allocate(Type type) => Pool.Allocate(type);
+        public static void Recycle<T>(T target) where T : class, IReusable => Pool.Recycle(target);
+        public static void Recycle(IReusable target) => Pool.Recycle(target);
+        #endregion
+
+
+        public static void RegistMessagePairs()
         {
             //Clean message pairs each time, allowing for multiple calls to this API, suitable for hotfix usage scenarios.
             rpcMessagePairs.Clear();
+            MessageNameTypePairs.Clear();
             // regist internal ping message 
             rpcMessagePairs.Add(typeof(Ping), typeof(Ping));
+            MessageNameTypePairs.Add(nameof(Ping), typeof(Ping));
 
             var assembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(v => v.FullName.StartsWith("com.zframework.tinyrpc.generated"));
@@ -205,23 +217,29 @@ namespace zFramework.TinyRPC
                 var types = assembly.GetTypes();
                 foreach (var type in types)
                 {
-                    if (type.IsSubclassOf(typeof(Request)))
+                    // store all messages by their type name , which is used to get type by name
+                    if (typeof(IMessage).IsAssignableFrom(type))
                     {
-                        var attr = type.GetCustomAttribute<ResponseTypeAttribute>();
-                        if (attr != null)
+                        MessageNameTypePairs.Add(type.Name, type);
+                        // store rpc message pairs
+                        if (type.IsSubclassOf(typeof(Request)))
                         {
-                            try
+                            var attr = type.GetCustomAttribute<ResponseTypeAttribute>();
+                            if (attr != null)
                             {
-                                rpcMessagePairs.Add(type, attr.Type);
+                                try
+                                {
+                                    rpcMessagePairs.Add(type, attr.Type);
+                                }
+                                catch (Exception e)
+                                {
+                                    Debug.LogWarning($"{nameof(Manager)}: RPC 消息对 {type.Name} - {attr.Type} 注册失败， {e} ");
+                                }
                             }
-                            catch (Exception e)
+                            else
                             {
-                                Debug.LogWarning($"{nameof(Manager)}: RPC 消息对 {type.Name} - {attr.Type} 注册失败， {e} ");
+                                throw new InvalidOperationException($"{nameof(Manager)}: 请务必为 {type.Name} 通过 ResponseTypeAttribute 配置 Response 消息！");
                             }
-                        }
-                        else
-                        {
-                            Debug.LogError($"{nameof(Manager)}: 请务必为 {type.Name} 通过 ResponseTypeAttribute 配置 Response 消息！");
                         }
                     }
                 }
@@ -252,7 +270,7 @@ namespace zFramework.TinyRPC
             {
                 if (rpcMessagePairs.TryGetValue(type, out var responseType))
                 {
-                    response = Activator.CreateInstance(responseType) as IResponse;
+                    response = Allocate(responseType) as IResponse;
                     response.Rid = request.Rid;
                     await handler.Dispatch(session, request, response);
                 }
@@ -289,7 +307,7 @@ namespace zFramework.TinyRPC
             }
         }
 
-        internal static Task<IResponse> AddRpcTask(IRequest request)
+        internal static Task<IResponse> RpcWaitingTask(IRequest request)
         {
             var tcs = new TaskCompletionSource<IResponse>();
             var cts = new CancellationTokenSource();
@@ -330,6 +348,17 @@ namespace zFramework.TinyRPC
 
 
         // 获取消息对应的 Response 类型
+        public static Type GetMessageType(string name)
+        {
+            if (MessageNameTypePairs.TryGetValue(name, out var type))
+            {
+                return type;
+            }
+            else
+            {
+                throw new Exception($"没有找到名为 {name} 的消息类型！");
+            }
+        }
         public static Type GetResponseType([NotNull] IRequest request)
         {
             if (!rpcMessagePairs.TryGetValue(request.GetType(), out var type))

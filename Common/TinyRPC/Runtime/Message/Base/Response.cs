@@ -12,6 +12,13 @@ namespace zFramework.TinyRPC.Messages
         public int Rid { get => rid; set => rid = value; }
         /// <inheritdoc/>
         public string Error { get => error; set => error = value; }
+        public bool IsRecycled { get; set; }
+        public virtual void OnRecycle()
+        {
+            IsRecycled = true;
+            error = default;
+            rid = default;
+        }
         public override string ToString() => JsonUtility.ToJson(this);
     }
 }
