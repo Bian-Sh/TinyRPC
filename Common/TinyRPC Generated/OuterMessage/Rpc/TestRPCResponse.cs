@@ -14,5 +14,10 @@ namespace zFramework.TinyRPC.Generated
     public partial class TestRPCResponse : Response
     {
         public string name;
+        public override void OnRecycle()
+        {
+            base.OnRecycle();
+            name = "";
+        }
     }
 }

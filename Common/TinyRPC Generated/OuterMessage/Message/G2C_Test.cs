@@ -10,5 +10,10 @@ namespace zFramework.TinyRPC.Generated
     public partial class G2C_Test : Message
     {
         public UnitInfo UnitInfo;
+        public override void OnRecycle()
+        {
+            base.OnRecycle();
+            UnitInfo = null;
+        }
     }
 }

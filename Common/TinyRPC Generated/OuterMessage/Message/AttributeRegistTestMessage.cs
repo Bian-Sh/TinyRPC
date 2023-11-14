@@ -13,5 +13,10 @@ namespace zFramework.TinyRPC.Generated
     public partial class AttributeRegistTestMessage : Message
     {
         public string desc;
+        public override void OnRecycle()
+        {
+            base.OnRecycle();
+            desc = "";
+        }
     }
 }

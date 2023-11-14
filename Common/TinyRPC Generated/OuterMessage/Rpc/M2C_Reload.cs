@@ -12,5 +12,11 @@ namespace zFramework.TinyRPC.Generated
     {
         public string Message;
         public List<MoveInfo> moveInfo = new();
+        public override void OnRecycle()
+        {
+            base.OnRecycle();
+            Message = "";
+            moveInfo = null;
+        }
     }
 }

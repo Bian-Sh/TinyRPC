@@ -12,5 +12,11 @@ namespace zFramework.TinyRPC.Generated
     {
         public string Account;
         public string Password;
+        public override void OnRecycle()
+        {
+            base.OnRecycle();
+            Account = "";
+            Password = "";
+        }
     }
 }

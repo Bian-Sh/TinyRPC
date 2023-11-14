@@ -17,5 +17,11 @@ namespace zFramework.TinyRPC.Generated
         ///  年龄（fake info）
         /// </summary>
         public int age;
+        public override void OnRecycle()
+        {
+            base.OnRecycle();
+            message = "";
+            age = 0;
+        }
     }
 }

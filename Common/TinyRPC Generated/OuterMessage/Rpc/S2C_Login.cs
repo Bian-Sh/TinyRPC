@@ -15,5 +15,12 @@ namespace zFramework.TinyRPC.Generated
         public bool success;
         public string token;
         public string errorDesc;
+        public override void OnRecycle()
+        {
+            base.OnRecycle();
+            success = false;
+            token = "";
+            errorDesc = "";
+        }
     }
 }
