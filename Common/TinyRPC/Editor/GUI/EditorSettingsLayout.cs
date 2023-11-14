@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEditor.PackageManager;
+using UnityEditorInternal;
 using UnityEngine;
 namespace zFramework.TinyRPC.Editor
 {
@@ -183,11 +184,11 @@ namespace zFramework.TinyRPC.Editor
                 try
                 {
                     CreateNewPackage();
+                    AddUpmPackageInfo();
                     //its new one , we should del the previours package
                     // and save new location as well
                     if (locationType != locationTypecached)
                     {
-                        AddUpmPackageInfo();
                         RemovePrevioursPackageEntity();
                         PostProcess();
                     }
@@ -208,6 +209,7 @@ namespace zFramework.TinyRPC.Editor
                 {
                     EditorApplication.UnlockReloadAssemblies();
                     AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+                    Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll();
                 }
             }
         }
@@ -225,11 +227,12 @@ namespace zFramework.TinyRPC.Editor
         {
             try
             {
+
                 if (locationType == LocationType.Project)
                 {
                     Client.Add($"file:../../{subLocation}/TinyRPC Generated");
                 }
-                else if (locationType == LocationType.Packages)
+                else
                 {
                     Client.Resolve();
                 }
@@ -255,6 +258,12 @@ namespace zFramework.TinyRPC.Editor
                 throw new Exception("请先选择 .proto 文件！");
             }
 
+            //Create brand new  
+            if (Directory.Exists(newLocation))
+            {
+                Directory.Delete(newLocation, true);
+            }
+
             if (!Directory.Exists(newLocation))
             {
                 Directory.CreateDirectory(newLocation);
@@ -276,7 +285,6 @@ namespace zFramework.TinyRPC.Editor
         {
             var current = settings.generatedScriptLocation;
             current = locationTypecached == LocationType.Project ? Path.Combine(Application.dataPath, current) : FileUtil.GetPhysicalPath(current);
-            Debug.Log($"{nameof(EditorSettingsLayout)}: current = {current}");
 
             //删除现有的文件夹
             if (Directory.Exists(current))
