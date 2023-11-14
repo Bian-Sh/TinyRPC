@@ -51,7 +51,7 @@ namespace zFramework.TinyRPC
 
     public sealed class InternalPool
     {
-        internal ConcurrentStack<object> items; //线程安全 栈
+        internal ConcurrentStack<IReusable> items; //线程安全 栈
 
         public int Capacity { get; set; } //池子有多大
         private int counted;
@@ -61,19 +61,18 @@ namespace zFramework.TinyRPC
             this.type = type;
             this.Capacity = capacity;
             this.counted = 0;
-            items = new ConcurrentStack<object>();
+            items = new ConcurrentStack<IReusable>();
         }
         public IReusable Allocate() //分配
         {
             if (!items.IsEmpty && items.TryPop(out var item))
             {
-                var reusable = item as IReusable;
-                reusable.IsRecycled = false;
+                item.IsRecycled = false;
                 Interlocked.Decrement(ref counted);
-                return reusable;
+                return item;
             }
-            item = Activator.CreateInstance(type);
-            return item as IReusable;
+            item = Activator.CreateInstance(type) as IReusable;
+            return item;
         }
         public void Recycle(IReusable target) //回收
         {
