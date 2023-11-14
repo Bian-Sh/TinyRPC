@@ -13,7 +13,7 @@ namespace zFramework.TinyRPC.Editor
      //ResponseType TestRPCResponse
      message TestRPCRequest // Request
      {
-        string name ;
+         string name ;
          repeated int32 age ;
          CustomType customType ;
      }
@@ -30,6 +30,7 @@ namespace zFramework.TinyRPC.Editor
 
         readonly StringBuilder sb;
         readonly List<string> summarys = new();
+        readonly List<string> members = new();
         readonly char[] splitChars = { ' ', '\t' };
         const string NAMESPACE = "zFramework.TinyRPC.Generated";
 
@@ -99,11 +100,10 @@ namespace zFramework.TinyRPC.Editor
         // 4. handle message
         public void AddMessageType(string line)
         {
-            line = line.Trim();
             if (line.StartsWith("message"))
             {
                 // if has no responsetype attribute attached ,try add summary here
-                if (!hasResponseTypeMarked )
+                if (!hasResponseTypeMarked)
                 {
                     InsertSummary();
                 }
@@ -133,9 +133,9 @@ namespace zFramework.TinyRPC.Editor
             }
         }
 
+
         public void AddMember(string line)
         {
-            line = line.Trim();
             if (line.StartsWith("//"))
             {
                 MarkSummary(line);
@@ -155,6 +155,28 @@ namespace zFramework.TinyRPC.Editor
             }
         }
 
+        private void MarkRecycleField(string line)
+        {
+            members.Add(line);
+        }
+
+        private void AddOnRecycleMethod(StringBuilder sb)
+        {
+            // only tinyrpc message need recycle 
+            if (isTinyRpcMessage)
+            {
+                var indent = new string('\t', 3);
+                sb.AppendLine("\t\tpublic override void OnRecycle()");
+                sb.AppendLine("\t\t{");
+                sb.AppendLine($"{indent}base.OnRecycle();");
+                foreach (var item in members)
+                {
+                    sb.AppendLine($"{indent}{item}");
+                }
+                sb.AppendLine("\t\t}");
+            }
+        }
+
         private void Repeated(string line)
         {
             try
@@ -165,7 +187,7 @@ namespace zFramework.TinyRPC.Editor
                 string type = ss[1];
                 type = ConvertType(type);
                 string name = ss[2];
-
+                MarkRecycleField($"{name} = null;");
                 sb.Append($"\t\tpublic List<{type}> {name} = new();\n");
             }
             catch (Exception e)
@@ -174,6 +196,25 @@ namespace zFramework.TinyRPC.Editor
             }
         }
 
+        private static string GetFieldDefaultValue(string type)
+        {
+            string value = type switch
+            {
+                "int16" => "0",
+                "int32" => "0",
+                "bytes" => "null",
+                "uint32" => "0",
+                "long" => "0",
+                "int64" => "0",
+                "uint64" => "0",
+                "uint16" => "0",
+                "string" => "\"\"",
+                "float" => "0f",
+                "bool" => "false",
+                _ => "null",
+            };
+            return value;
+        }
         private static string ConvertType(string type)
         {
             string typeCs = type switch
@@ -190,7 +231,6 @@ namespace zFramework.TinyRPC.Editor
             };
             return typeCs;
         }
-
         private void Members(string line)
         {
             try
@@ -201,7 +241,8 @@ namespace zFramework.TinyRPC.Editor
                 string type = ss[0];
                 string name = ss[1];
                 string typeCs = ConvertType(type);
-
+                var value = GetFieldDefaultValue(type);
+                MarkRecycleField($"{name} = {value};");
                 sb.Append($"\t\tpublic {typeCs} {name};\n");
             }
             catch (Exception e)
@@ -210,7 +251,7 @@ namespace zFramework.TinyRPC.Editor
             }
         }
 
-        private void Header()
+        private void Header(StringBuilder sb)
         {
             var inner = new StringBuilder();
             inner.AppendLine("/*");
@@ -234,7 +275,8 @@ namespace zFramework.TinyRPC.Editor
 
         public ScriptInfo ToScriptInfo()
         {
-            Header();
+            Header(sb);
+            AddOnRecycleMethod(sb);
             sb.AppendLine("\t}");
             sb.AppendLine("}");
             var content = sb.ToString();
@@ -271,6 +313,7 @@ namespace zFramework.TinyRPC.Editor
             parentClass = "";
             msgName = "";
             summarys.Clear();
+            members.Clear();
         }
 
         /// <summary>
@@ -278,7 +321,7 @@ namespace zFramework.TinyRPC.Editor
         /// </summary>
         /// <param name="block">分割的消息数据</param>
         /// <returns>消息代码内容</returns>
-        public  ScriptInfo ResolveBlockInfo(string block)
+        public ScriptInfo ResolveBlockInfo(string block)
         {
             var lines = block.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
