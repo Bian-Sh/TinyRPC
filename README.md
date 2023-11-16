@@ -14,6 +14,8 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 * 支持常规网络消息的收发
 
 * 支持基于事件的完善的网络通信生命周期管理，断线即刻感知。
+
+* 2 种消息处理的注册方案：监听模式 、Attribute 标注模式
   
 # 功能
 
@@ -95,8 +97,15 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
 ![](./doc/TinyRPC.gif)
 
+6. 你也可以把 TinyRPC 提供的 Server 示例 打包成 Dedicated Server 部署在 Dedicated Server 支持的系统或平台上！
 
-### 登录、消息发送
+![Dedicated Server](doc/dedicated-server.png)
+
+![Tinyrpc Ds](doc/tinyrpc-ds.gif)
+
+
+
+## 登录、消息发送
 
 在 Unity 客户端中，我们使用了以下关键 API：
 
@@ -175,7 +184,7 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
         }
 ```
 
-### 消息处理
+## 消息处理
 
 在服务器端，我们使用了消息处理器来处理接收到的各类消息：Normal 消息、RPC 消息、Ping 消息。
 
@@ -289,10 +298,17 @@ public class Foo: MonoBehaviour
 
 ```
 <root>
+|   
 +---Editor
+|   |   com.zframework.tinyrpc.editor.asmdef
 |   |   
 |   +---Analyzer
 |   |       MessageHandlerPostprocessor.cs
+|   |       
+|   +---Async
+|   |       TaskDriver.cs
+|   |       UpmRequestAwaiter.cs
+|   |       UpmRequestExtension.cs
 |   |       
 |   +---CodeGen
 |   |       ProtoContentProcessor.cs
@@ -313,10 +329,13 @@ public class Foo: MonoBehaviour
 |           TinyRpcEditorSettings.cs
 |           
 \---Runtime
+    |   com.zframework.tinyrpc.runtime.asmdef
     |   
     +---Data
+    |       IReusable.cs
     |       MessageType.cs
     |       MessageWrapper.cs
+    |       ObjectPool.cs
     |       RpcInfo.cs
     |       SerializeHelper.cs
     |       TinyRpcSettings.cs
@@ -378,7 +397,7 @@ public class Foo: MonoBehaviour
 遵循 MIT 开源协议
 
 
-<a id="english">[ 中文 ](#chinese)</a>
+<a id="english">[ Top ↑ ](#chinese)</a>
 
 # TinyRPC
 
@@ -393,6 +412,8 @@ Many aspects of this network framework have been inspired by [ET](https://github
 * Supports bidirectional RPC requests between the client and the server.
 
 * Supports the sending and receiving of regular network messages.
+
+* Supports 2 way of registering message handlers: observer pattern, Attribute annotation mode.
 
 ## Functionality
 
@@ -470,6 +491,14 @@ Provides an interface for runtime configuration changes in the editor, allowing 
 5. This project was developed using Unity 2021.3.11f2. Please use this version or a higher version.
 
 ![](./doc/TinyRPC.gif)
+
+6. You can also package the TinyRPC server example into a Dedicated Server and deploy it on a system or platform that supports Dedicated Servers!
+
+![Dedicated Server](doc/dedicated-server.png)
+
+![Tinyrpc Ds](doc/tinyrpc-ds.gif)
+
+
 
 ### Login and Message Sending
 
@@ -658,10 +687,17 @@ Here is the file system tree of TinyRPC. Click to see the complete network archi
 
 ```
 <root>
+|   
 +---Editor
+|   |   com.zframework.tinyrpc.editor.asmdef
 |   |   
 |   +---Analyzer
 |   |       MessageHandlerPostprocessor.cs
+|   |       
+|   +---Async
+|   |       TaskDriver.cs
+|   |       UpmRequestAwaiter.cs
+|   |       UpmRequestExtension.cs
 |   |       
 |   +---CodeGen
 |   |       ProtoContentProcessor.cs
@@ -682,10 +718,13 @@ Here is the file system tree of TinyRPC. Click to see the complete network archi
 |           TinyRpcEditorSettings.cs
 |           
 \---Runtime
+    |   com.zframework.tinyrpc.runtime.asmdef
     |   
     +---Data
+    |       IReusable.cs
     |       MessageType.cs
     |       MessageWrapper.cs
+    |       ObjectPool.cs
     |       RpcInfo.cs
     |       SerializeHelper.cs
     |       TinyRpcSettings.cs
