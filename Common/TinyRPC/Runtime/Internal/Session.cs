@@ -65,7 +65,7 @@ namespace zFramework.TinyRPC
             Interlocked.CompareExchange(ref id, 0, int.MaxValue);
             request.Rid = Interlocked.Increment(ref id);
 
-            Send(request);  // do not catch any exception here,jut let it throw out
+            Send(request);  // do not catch any exception here,just let it throw out
             var response = await RpcWaitingTask(request);
             Recycle(request); // after waiting task, recycle request 
 

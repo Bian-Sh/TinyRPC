@@ -1,11 +1,9 @@
+#if UNITY_EDITOR
 using EasyButtons;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using zFramework.TinyRPC;
 
 public class SomeLogicTest : MonoBehaviour
 {
@@ -23,3 +21,5 @@ public class SomeLogicTest : MonoBehaviour
         Debug.Log($"time2: {time2:F}");
     }
 }
+
+#endif
