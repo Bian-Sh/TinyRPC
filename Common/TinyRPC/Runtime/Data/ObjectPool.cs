@@ -5,9 +5,9 @@ using UnityEngine;
 
 namespace zFramework.TinyRPC
 {
-    public static  class ObjectPool
+    public static class ObjectPool
     {
-        static readonly  ConcurrentDictionary<Type, InternalPool> pools = new();
+        static readonly ConcurrentDictionary<Type, InternalPool> pools = new();
         private static InternalPool GetPool<T>() where T : class, IReusable => GetPool(typeof(T));
         private static InternalPool GetPool(Type type)
         {
@@ -60,11 +60,10 @@ namespace zFramework.TinyRPC
             if (null != target && !target.IsRecycled)
             {
                 target.OnRecycle();
-                Interlocked.Increment(ref counted);
-                Interlocked.CompareExchange(ref counted, Capacity, Capacity);
-                if (counted != Capacity)
+                if (counted < Capacity)
                 {
                     items.Push(target);
+                    Interlocked.Increment(ref counted);
                 }
             }
         }
