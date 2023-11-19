@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using zFramework.TinyRPC.Messages;
-using static zFramework.TinyRPC.Manager;
+using static zFramework.TinyRPC.ObjectPool;
 
 namespace zFramework.TinyRPC
 {

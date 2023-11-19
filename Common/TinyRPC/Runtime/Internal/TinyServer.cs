@@ -122,7 +122,6 @@ namespace zFramework.TinyRPC
             return response;
         }
 
-
         public void Send(Session session, Message message)
         {
             try
@@ -135,8 +134,6 @@ namespace zFramework.TinyRPC
                 HandleDisactiveSession(session);
             }
         }
-
-
 
         #region Assistant Function
         private void HandleDisactiveSession(Session session)

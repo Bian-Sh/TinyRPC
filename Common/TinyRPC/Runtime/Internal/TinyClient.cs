@@ -6,7 +6,7 @@ using zFramework.TinyRPC.Messages;
 using System.Threading.Tasks;
 using zFramework.TinyRPC.Exceptions;
 using zFramework.TinyRPC.Settings;
-using static zFramework.TinyRPC.Manager;
+using static zFramework.TinyRPC.ObjectPool;
 
 namespace zFramework.TinyRPC
 {

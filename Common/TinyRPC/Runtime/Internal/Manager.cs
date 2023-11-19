@@ -8,12 +8,13 @@ using System.Threading.Tasks;
 using UnityEngine;
 using zFramework.TinyRPC.Messages;
 using zFramework.TinyRPC.Settings;
+using static zFramework.TinyRPC.ObjectPool;
 
 namespace zFramework.TinyRPC
 {
     // 获取所有的消息处理器解析并缓存
     // 消息处理器注册方式有 2 种：
-    // 1. 使用  MessageHandlerProviderAttribute +  MessageHandlerAttribute 标记方法,前者标记类型，后者标记方法
+    // 1. 使用  MessageHandlerProviderAttribute +  MessageHandlerAttribute 标记,前者标记类型，后者标记方法
     // 2. 通过 UnityEngine.Component 扩展方法 AddNetworkSignal  注册
     //
     // 约定 MessageHandlerAttribute 只能出现在静态方法上
@@ -24,7 +25,6 @@ namespace zFramework.TinyRPC
         internal static readonly Dictionary<string, Type> MessageNameTypePairs = new(); // 记录了全部消息类型，key = 消息Type名，value = 消息类型
         static readonly Dictionary<Type, Type> rpcMessagePairs = new(); // RPC 消息对，key = Request , value = Response
         static readonly Dictionary<int, RpcInfo> rpcInfoPairs = new(); // RpcId + RpcInfo
-        static readonly ObjectPool Pool = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
         public static void Awake()
@@ -191,14 +191,6 @@ namespace zFramework.TinyRPC
                 }
             }
         }
-
-        #region ObjectPool 
-        public static T Allocate<T>() where T : class, IReusable => Pool.Allocate<T>();
-        public static IReusable Allocate(Type type) => Pool.Allocate(type);
-        public static void Recycle<T>(T target) where T : class, IReusable => Pool.Recycle(target);
-        public static void Recycle(IReusable target) => Pool.Recycle(target);
-        #endregion
-
 
         public static void RegistMessagePairs()
         {

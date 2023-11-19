@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using static zFramework.TinyRPC.Manager;
+using static zFramework.TinyRPC.ObjectPool;
 namespace zFramework.TinyRPC.Messages
 {
     // 由于jsonutility无法序列化继承关系，所以需要一个包装类

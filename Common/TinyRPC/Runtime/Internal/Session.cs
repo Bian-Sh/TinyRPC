@@ -8,6 +8,7 @@ using zFramework.TinyRPC.Messages;
 using zFramework.TinyRPC.Exceptions;
 using zFramework.TinyRPC.Settings;
 using static zFramework.TinyRPC.Manager;
+using static zFramework.TinyRPC.ObjectPool;
 
 namespace zFramework.TinyRPC
 {
@@ -112,12 +113,13 @@ namespace zFramework.TinyRPC
                     throw new Exception("在读取网络消息时得到了不完整数据,会话断开！");
                 }
                 // 解析消息类型
-                context.Post(_ => OnMessageReceived(body), null);
+                context.Post(OnMessageReceived, body);
             }
         }
 
-        private void OnMessageReceived(byte[] content)
+        private void OnMessageReceived(object state)
         {
+            var content = state as byte[];
             var message = SerializeHelper.Deserialize(content);
             if (!TinyRpcSettings.Instance.logFilters.Contains(message.GetType().Name)) //Settings can only be created in main thread
             {
@@ -137,7 +139,7 @@ namespace zFramework.TinyRPC
                 //normal message
                 HandleMessage(this, message);
             }
-            // request 可能需要延时回收
+            //todo: request 可能需要延时回收
             Recycle(message);
         }
         public override string ToString() => $"Session: {IPEndPoint}  IsServer:{IsServerSide}";
