@@ -10,8 +10,8 @@ namespace zFramework.TinyRPC.Settings
         //specific from which assembly you can collect handlers
         public List<string> assemblyNames = new() { "Assembly-CSharp" };
 
-        //filter log message, default is Ping (must use full type name here)
-        public List<string> logFilters = new() { "zFramework.TinyRPC.Ping" };
+        //filter log message, default is Ping (do not use full type name)
+        public List<string> logFilters = new() { "Ping" };
 
         public int pingInterval = 1000;
 
