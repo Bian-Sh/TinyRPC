@@ -128,10 +128,12 @@ namespace zFramework.TinyRPC
                 {
                     Debug.LogError($"{nameof(TinyClient)}: Ping Error {e} ， retry count  = {count}");
                     count++;
+                    //应该稍作延迟，这可能在网络状态得到缓和的情况下加大 ping 通的几率
+                    await Task.Delay(TinyRpcSettings.Instance.pingInterval);
                     if (count > TinyRpcSettings.Instance.pingRetry)
                     {
                         Stop();
-                        Debug.LogError($"{nameof(TinyClient)}: Ping Timeout!");
+                        Debug.LogError($"{nameof(TinyClient)}: Ping Timeout ，Session is inactive!");
                     }
                 }
                 // 其他异常就没有重试的必要了，直接关断会话

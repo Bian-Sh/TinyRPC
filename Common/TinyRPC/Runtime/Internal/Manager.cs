@@ -199,6 +199,8 @@ namespace zFramework.TinyRPC
             // regist internal ping message 
             rpcMessagePairs.Add(typeof(Ping), typeof(Ping));
             MessageNameTypePairs.Add(nameof(Ping), typeof(Ping));
+            // regist response for fallback 
+            MessageNameTypePairs.Add(nameof(Response), typeof(Response));
 
             var assembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(v => v.FullName.StartsWith("com.zframework.tinyrpc.generated"));
@@ -256,39 +258,52 @@ namespace zFramework.TinyRPC
         internal static async void HandleRequest(Session session, IRequest request)
         {
             var type = request.GetType();
+            var error = string.Empty;
             IResponse response;
-            if (RpcMessageHandlers.TryGetValue(type, out var handler))
+            if (!rpcMessagePairs.TryGetValue(type, out var responseType))
             {
-                if (rpcMessagePairs.TryGetValue(type, out var responseType))
-                {
-                    response = Allocate(responseType) as IResponse;
-                    response.Rid = request.Rid;
-                    await handler.Dispatch(session, request, response);
-                }
-                else
-                {
-                    var error = $"RPC 消息 {request.GetType().Name} 没有找到对应的 Response 类型！";
-                    response = new Response
-                    {
-                        Rid = request.Rid,
-                        Error = error
-                    };
-                    Debug.LogWarning($"{nameof(Manager)}: {error}");
-                }
-            }
-            else
-            {
-                var error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！";
+                // 几乎没有可能发生，因为在注册时已经做了检查，除非消息程序集 "com.zframework.tinyrpc.generated" 被恶意修改
+                error = $"RPC 请求 {request.GetType().Name} 没有找到对应的 Response 类型！";
                 response = new Response
                 {
                     Rid = request.Rid,
                     Error = error
                 };
                 Debug.LogWarning($"{nameof(Manager)}: {error}");
+                session.Reply(response);
+                return;
+            }
+
+            response = Allocate(responseType) as IResponse;
+            response.Rid = request.Rid;
+
+            if (RpcMessageHandlers.TryGetValue(type, out var handler))
+            {
+                try
+                {
+                    await handler.Dispatch(session, request, response);
+                }
+                catch (Exception e)
+                {
+                    // MessageHandler内部异常，告知用户~
+                    error = $"RPC 消息 {request.GetType().Name} MessageHandler 执行过程中发生异常！{e}";
+                    Debug.LogError($"{nameof(Manager)}: {error}");
+                }
+            }
+            else
+            {
+                // 几乎没有可能发生，因为使用了反射技术为所有 request 注册了消息处理器
+                error = $"RPC 消息 {request.GetType().Name} 没有找到对应的处理器！";
+                Debug.LogWarning($"{nameof(Manager)}: {error}");
+            }
+            //只有存在错误时赋值，避免handler内部提供的错误被覆盖
+            if (!string.IsNullOrEmpty(error))
+            {
+                response.Error = error;
             }
             session.Reply(response);
         }
-     
+
 
         // 获取 IRequest 对应的 Response 实例
         public static IResponse CreateResponse([NotNull] IRequest request)
