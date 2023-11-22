@@ -243,7 +243,7 @@ namespace zFramework.TinyRPC.Editor
             currentLocationType = selectedLocationType;
             settings.generatedScriptLocation = generatedScriptLocationProperty.stringValue = newLocation;
             serializedObject.ApplyModifiedProperties();
-            Save(); 
+            Save();
         }
         private void CreateNewPackage()
         {
@@ -371,21 +371,32 @@ namespace zFramework.TinyRPC.Editor
             var path = EditorUtility.OpenFilePanelWithFilters("请选择 .proto 文件", Application.dataPath, new string[] { "Protobuf file", "proto" });
             if (!string.IsNullOrEmpty(path))
             {
-                var relatedPath = FileUtil.GetProjectRelativePath(path);
-                //.proto 文件不在工程内，则拷贝到工程中,且覆盖原有的 proto 文件
-                // 如果在工程内，则不做处理，尊重用户随意存放的权力
-                if (string.IsNullOrEmpty(relatedPath))
+                try
                 {
-                    var fileName = Path.GetFileName(path);
-                    relatedPath = $"{ProtoLocation}/{fileName}";
-                    File.Copy(path, relatedPath, true);
-                    AssetDatabase.Refresh();
+                    var relatedPath = FileUtil.GetProjectRelativePath(path);
+                    //.proto 文件不在工程内，则拷贝到工程中,且覆盖原有的 proto 文件
+                    // 如果在工程内，则不做处理，尊重用户随意存放的权力
+                    if (string.IsNullOrEmpty(relatedPath))
+                    {
+                        var fileName = Path.GetFileName(path);
+                        relatedPath = $"{ProtoLocation}/{fileName}";
+                        if (!Directory.Exists(ProtoLocation))
+                        {
+                            Directory.CreateDirectory(ProtoLocation);
+                        }
+                        File.Copy(path, relatedPath, true);
+                        AssetDatabase.Refresh();
+                    }
+                    var proto = AssetDatabase.LoadAssetAtPath<DefaultAsset>(relatedPath);
+                    protoProperty.arraySize = 1;
+                    protoProperty.GetArrayElementAtIndex(0).objectReferenceValue = proto;
+                    serializedObject.ApplyModifiedProperties();
+                    TinyRpcEditorSettings.Save();
                 }
-                var proto = AssetDatabase.LoadAssetAtPath<DefaultAsset>(relatedPath);
-                protoProperty.arraySize = 1;
-                protoProperty.GetArrayElementAtIndex(0).objectReferenceValue = proto;
-                serializedObject.ApplyModifiedProperties();
-                TinyRpcEditorSettings.Save();
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
             }
         }
 
