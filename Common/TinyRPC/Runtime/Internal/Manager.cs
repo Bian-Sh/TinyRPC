@@ -304,24 +304,6 @@ namespace zFramework.TinyRPC
             session.Reply(response);
         }
 
-
-        // 获取 IRequest 对应的 Response 实例
-        public static IResponse CreateResponse([NotNull] IRequest request)
-        {
-            IResponse response;
-            if (!rpcMessagePairs.TryGetValue(request.GetType(), out var type))
-            {
-                //fallback Response is the base type , thus Response.
-                type = typeof(Response);
-            }
-            response = Activator.CreateInstance(type) as IResponse;
-            response.Rid = request.Rid;
-            response.Error = response is Response ? $"RPC 消息 {request.GetType().Name} 没有找到对应的 Response 类型！" : "";
-
-            return response;
-        }
-
-
         // 获取消息对应的 Response 类型
         public static Type GetMessageType(string name)
         {
