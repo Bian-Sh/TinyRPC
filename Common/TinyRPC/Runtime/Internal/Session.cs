@@ -9,6 +9,7 @@ using zFramework.TinyRPC.Exceptions;
 using zFramework.TinyRPC.Settings;
 using static zFramework.TinyRPC.Manager;
 using static zFramework.TinyRPC.ObjectPool;
+using System.Collections.Generic;
 
 namespace zFramework.TinyRPC
 {
@@ -50,10 +51,16 @@ namespace zFramework.TinyRPC
                 Debug.LogWarning($"{nameof(Session)}: 消息发送失败，会话已失效！");
             }
         }
-
+        #region RPC 
         internal void Reply(IMessage message) => Send(message);
 
-        // 写注释，特别强调2组Exception: 
+        ///<summary>
+        /// 调用RPC方法并返回响应结果。
+        /// </summary>
+        /// <typeparam name="T">响应结果的类型。</typeparam>
+        /// <param name="request">RPC请求。</param>
+        /// <returns>响应结果。</returns>
+        /// <exception cref="RpcResponseException">Rpc 响应时抛出的异常</exception>
         internal async Task<T> Call<T>(IRequest request) where T : class, IResponse, new()
         {
             // 校验 RPC 消息匹配
@@ -77,6 +84,40 @@ namespace zFramework.TinyRPC
             return response as T;
         }
 
+        internal void HandleResponse(IResponse response)
+        {
+            if (rpcInfoPairs.TryGetValue(response.Rid, out var rpcInfo))
+            {
+                rpcInfo.source.Dispose();
+                rpcInfo.task.SetResult(response);
+                rpcInfoPairs.Remove(response.Rid);
+            }
+        }
+
+        internal Task<IResponse> RpcWaitingTask(IRequest request)
+        {
+            var tcs = new TaskCompletionSource<IResponse>();
+            var cts = new CancellationTokenSource();
+            //等待并给定特定时长的响应机会，这在发生复杂操作时很有效
+            var timeout = Mathf.Max(request.Timeout, TinyRpcSettings.Instance.rpcTimeout);
+            cts.CancelAfter(timeout);
+            var exception = new TimeoutException($"RPC Call Timeout! Request: {request}");
+            cts.Token.Register(() =>
+            {
+                rpcInfoPairs.Remove(request.Rid);
+                tcs.TrySetException(exception);
+            }, useSynchronizationContext: false);
+            var rpcinfo = new RpcInfo
+            {
+                id = request.Rid,
+                task = tcs,
+                source = cts
+            };
+            rpcInfoPairs.Add(request.Rid, rpcinfo);
+            return tcs.Task;
+        }
+
+        #endregion
         internal async Task ReceiveAsync()
         {
             var stream = client.GetStream();
@@ -147,11 +188,21 @@ namespace zFramework.TinyRPC
         {
             client?.Dispose();
             source?.Dispose();
+
+            foreach (var rpcInfo in rpcInfoPairs.Values)
+            {
+                rpcInfo.source.Dispose();
+                rpcInfo.task.SetCanceled();
+            }
+            rpcInfoPairs.Clear();
+
             IsAlive = false;
         }
         private int id = 0;
         private readonly TcpClient client;
         private readonly CancellationTokenSource source;
         private readonly SynchronizationContext context;
+        private readonly Dictionary<int, RpcInfo> rpcInfoPairs = new(); // RpcId + RpcInfo
+
     }
 }

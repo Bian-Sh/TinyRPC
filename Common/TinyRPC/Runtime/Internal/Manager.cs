@@ -24,7 +24,6 @@ namespace zFramework.TinyRPC
         internal static readonly Dictionary<Type, IRpcMessageHandler> RpcMessageHandlers = new();
         internal static readonly Dictionary<string, Type> MessageNameTypePairs = new(); // 记录了全部消息类型，key = 消息Type名，value = 消息类型
         static readonly Dictionary<Type, Type> rpcMessagePairs = new(); // RPC 消息对，key = Request , value = Response
-        static readonly Dictionary<int, RpcInfo> rpcInfoPairs = new(); // RpcId + RpcInfo
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
         public static void Awake()
@@ -289,38 +288,7 @@ namespace zFramework.TinyRPC
             }
             session.Reply(response);
         }
-        internal static void HandleResponse(IResponse response)
-        {
-            if (rpcInfoPairs.TryGetValue(response.Rid, out var rpcInfo))
-            {
-                rpcInfo.source.Dispose();
-                rpcInfo.task.SetResult(response);
-                rpcInfoPairs.Remove(response.Rid);
-            }
-        }
-
-        internal static Task<IResponse> RpcWaitingTask(IRequest request)
-        {
-            var tcs = new TaskCompletionSource<IResponse>();
-            var cts = new CancellationTokenSource();
-            //等待并给定特定时长的响应机会，这在发生复杂操作时很有效
-            var timeout = Mathf.Max(request.Timeout, TinyRpcSettings.Instance.rpcTimeout);
-            cts.CancelAfter(timeout);
-            var exception = new TimeoutException($"RPC Call Timeout! Request: {request}");
-            cts.Token.Register(() =>
-            {
-                rpcInfoPairs.Remove(request.Rid);
-                tcs.TrySetException(exception);
-            }, useSynchronizationContext: false);
-            var rpcinfo = new RpcInfo
-            {
-                id = request.Rid,
-                task = tcs,
-                source = cts
-            };
-            rpcInfoPairs.Add(request.Rid, rpcinfo);
-            return tcs.Task;
-        }
+     
 
         // 获取 IRequest 对应的 Response 实例
         public static IResponse CreateResponse([NotNull] IRequest request)
