@@ -9,12 +9,11 @@ namespace zFramework.TinyRPC.Generated
     /// <summary>
     ///  角色移动信息
     /// </summary>
-    [Serializable]
-    public partial class MoveInfo
+    public struct MoveInfo
     {
-        public List<float> X = new();
-        public List<float> Y = new();
-        public List<float> Z = new();
+        public List<float> X;
+        public List<float> Y;
+        public List<float> Z;
         public float A;
         public float B;
         public float C;

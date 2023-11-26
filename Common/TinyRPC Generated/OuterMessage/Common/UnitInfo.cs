@@ -6,8 +6,7 @@ using System;
 using System.Collections.Generic;
 namespace zFramework.TinyRPC.Generated
 {
-    [Serializable]
-    public partial class UnitInfo
+    public struct UnitInfo
     {
         public long UnitId;
         public int ConfigId;
@@ -18,8 +17,8 @@ namespace zFramework.TinyRPC.Generated
         public float ForwardX;
         public float ForwardY;
         public float ForwardZ;
-        public List<int> Ks = new();
-        public List<long> Vs = new();
+        public List<int> Ks;
+        public List<long> Vs;
         public MoveInfo MoveInfo;
     }
 }

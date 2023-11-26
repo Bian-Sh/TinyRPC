@@ -22,11 +22,20 @@ message TestMessage // Message
 }
 
 // C2S = Client to Server
-//ResponseType S2C_Login
+// ResponseType S2C_Login
 message C2S_Login // Request
 {
 	string name ;
 	string password ;
+	Vector3 position;
+	Quaternion rotation;
+	Vector2 moveDirection;
+	Vector4 test;
+	Color color;
+	Color32 color32;
+	LayerMask layerMask;
+	Matrix4x4 matrix;
+	Rect rect;
 }
 
 // S2C = Server to Client
@@ -56,6 +65,8 @@ message MoveInfo
 	float W ;
 	int32 TurnSpeed ;
 }
+
+
 
 message UnitInfo
 {

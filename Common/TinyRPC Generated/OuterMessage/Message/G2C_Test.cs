@@ -13,7 +13,7 @@ namespace zFramework.TinyRPC.Generated
         public override void OnRecycle()
         {
             base.OnRecycle();
-            UnitInfo = null;
+            UnitInfo = default;
         }
     }
 }
