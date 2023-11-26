@@ -260,7 +260,12 @@ namespace zFramework.TinyRPC.Editor
                 string name = ss[1];
                 string typeCs = ConvertType(type);
                 var value = GetFieldDefaultValue(type);
-                hasBuildInTypeUsed = BuildInType.Contains(typeCs);
+                // only check once , in case of being overwrited later
+                // will only be reset by reset function
+                if (!hasBuildInTypeUsed)
+                {
+                    hasBuildInTypeUsed = BuildInType.Contains(typeCs);
+                }
                 MarkRecycleField($"{name} = {value};");
                 sb.Append($"\t\tpublic {typeCs} {name};\n");
             }
@@ -333,6 +338,7 @@ namespace zFramework.TinyRPC.Editor
             hasRepeatedField = false;
             hasSerializableMarked = false;
             hasResponseTypeMarked = false;
+            hasBuildInTypeUsed = false;
             parentClass = "";
             msgName = "";
             summarys.Clear();
