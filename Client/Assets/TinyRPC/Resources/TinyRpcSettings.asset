@@ -16,6 +16,7 @@ MonoBehaviour:
   - Assembly-CSharp
   logFilters:
   - Ping
+  - Response
   pingInterval: 1000
   pingRetry: 3
   rpcTimeout: 2000

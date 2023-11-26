@@ -72,8 +72,6 @@ namespace zFramework.TinyRPC.Editor
 
         private void DrawMainContent()
         {
-            EditorGUILayout.PropertyField(protoProperty, true);
-            DrawEditorHelpbox();
             // 用户可选存储的文件夹： Assets 内、Project 同级目录，Packages 文件夹 
             // 支持在Project 同级目录下新增任意文件夹深度的父节点，比如：[Project 同级]/xxx/xxx/xxx/TinyRPC Generated/
 
@@ -132,6 +130,8 @@ namespace zFramework.TinyRPC.Editor
                 // draw waring helpbox : 选择了新的消息存储位置，在下次生成代码时生效 
                 EditorGUILayout.HelpBox("选择了新的消息存储位置，在下次生成代码时生效", UnityEditor.MessageType.Warning);
             }
+            EditorGUILayout.PropertyField(protoProperty, true);
+            DrawEditorHelpbox();
         }
 
         private void DrawArrayEmptyInterface()
