@@ -87,10 +87,13 @@ namespace zFramework.TinyRPC
 
         public void Boardcast(Message message)
         {
-            foreach (var session in sessions)
+            // InvalidOperationException: Collection was modified; enumeration operation may not execute.
+            var cached = new List<Session>(sessions);
+            foreach (var session in cached)
             {
                 Send(session, message);
             }
+            cached.Clear();
         }
 
         public async Task<T> Call<T>(Session session, IRequest request) where T : class, IResponse, new()
