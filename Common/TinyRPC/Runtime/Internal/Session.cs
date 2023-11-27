@@ -164,7 +164,7 @@ namespace zFramework.TinyRPC
             var message = SerializeHelper.Deserialize(content);
             if (!TinyRpcSettings.Instance.logFilters.Contains(message.GetType().Name)) //Settings can only be created in main thread
             {
-                Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 =  {message}");
+                Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 = {message.GetType().Name}  {message}");
             }
             // rpc message
             if (message is Request || (message is Ping && IsServerSide))
