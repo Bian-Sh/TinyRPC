@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 namespace zFramework.TinyRPC.Generated
 {
+    [Serializable]
     public struct UnitInfo
     {
         public long UnitId;

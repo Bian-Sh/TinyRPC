@@ -9,6 +9,7 @@ namespace zFramework.TinyRPC.Generated
     /// <summary>
     ///  角色移动信息
     /// </summary>
+    [Serializable]
     public struct MoveInfo
     {
         public List<float> X;
