@@ -121,14 +121,16 @@ namespace zFramework.TinyRPC.Editor
                 {
                     InsertSummary();
                 }
+                // if is not struct and has not marked serializable , append it !
+                //Please ensure that the struct is marked with the[Serializable] attribute.
+                //I have discovered that it will not be serialized without it when used as an item in a list or as a member of another message.
+                AddSerializable();
                 msgName = line.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)[1];
                 string[] ss = line.Split(new[] { "//" }, StringSplitOptions.RemoveEmptyEntries);
                 parentClass = ss.Length == 2 ? ss[1].Trim() : "";
 
                 if (parentClass == "Message" || parentClass == "Request" || parentClass == "Response")
                 {
-                    // if is not struct and has not marked serializable , append it !
-                    AddSerializable();
                     sb.Append($"\tpublic partial class {msgName}");
                     sb.Append($" : {parentClass}");
                     isTinyRpcMessage = true;
