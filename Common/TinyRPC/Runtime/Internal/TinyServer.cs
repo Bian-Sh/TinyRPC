@@ -65,8 +65,8 @@ namespace zFramework.TinyRPC
             }
         }
 
-        // 需要对 session ReceiveAsync 进行异常处理
-        // 故而先前的调用（_=Task.Run(session.ReceiveAsync)被修正为当前样式
+        // 需要对 self ReceiveAsync 进行异常处理
+        // 故而先前的调用（_=Task.Run(self.ReceiveAsync)被修正为当前样式
         // 同理可得，Send、Call 皆是如此
         private async void ReceiveAsync(Session session)
         {
@@ -89,10 +89,30 @@ namespace zFramework.TinyRPC
         {
             // InvalidOperationException: Collection was modified; enumeration operation may not execute.
             var cached = new List<Session>(sessions);
+            // as message will be recycled, we need to do some stuff to avoid it
+            // hack message type to avoid it being recycled
+            // tell object pool a fack news that this message is recycled
+            message.IsRecycled = true;
             foreach (var session in cached)
             {
                 Send(session, message);
             }
+            message.IsRecycled = false;
+            ObjectPool.Recycle(message);
+            cached.Clear();
+        }
+
+        public void BoardcastOthers(Session self, Message message)
+        {
+            var cached = new List<Session>(sessions);
+            cached.Remove(self);
+            message.IsRecycled = true;
+            foreach (var s in cached)
+            {
+                Send(s, message);
+            }
+            message.IsRecycled = false;
+            ObjectPool.Recycle(message);
             cached.Clear();
         }
 
