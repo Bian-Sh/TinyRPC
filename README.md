@@ -1,9 +1,16 @@
+> 本说明有配图，请确保你的网络畅通，图文模式下阅读更佳。
+
 <a id="chinese">[English](#english)</a>
 # TinyRPC
 
-TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 RPC 框架。它的目标是提供一个轻量级、易于使用的 RPC 解决方案。
+TinyRPC 是一个使用 TCP + JsonUtility + Task 没有第三方依赖的简易网络框架，支持 RPC/常规 消息分发。它的目标是提供一个轻量级、易于使用的 RPC 解决方案。
 
 这个网络框架很多地方学习参考了 [ET](https://github.com/egametang/ET) ，在此表示感谢。
+
+基于 TinyRPC 的示例项目 ：[unity-drones-multiplayer-tinyrpc](https://github.com/Bian-Sh/unity-drones-multiplayer-tinyrpc)
+
+![](doc/preview.gif)
+
 
 # 特性
 
@@ -13,7 +20,7 @@ TinyRPC 是一个使用 Socket + JsonUtility 的没有第三方依赖的简易 R
 
 * 支持常规网络消息的收发
 
-* 支持基于事件的完善的网络通信生命周期管理，断线即刻感知。
+* 支持基于 TCP 建立连接之上的网络通信，完整的生命周期管理，断线即刻感知。
 
 * 2 种消息处理的注册方案：监听模式 、Attribute 标注模式
   
@@ -404,6 +411,10 @@ public class Foo: MonoBehaviour
 TinyRPC is a lightweight RPC framework with no third-party dependencies that uses Socket + JsonUtility. Its goal is to provide a lightweight and easy-to-use RPC solution.
 
 Many aspects of this network framework have been inspired by [ET](https://github.com/egametang/ET), and I express my gratitude for that.
+
+Sample project based on TinyRPC: [unity-drones-multiplayer-tinyrpc](https://github.com/Bian-Sh/unity-drones-multiplayer-tinyrpc)
+
+![](doc/preview.gif)
 
 ## Features
 
