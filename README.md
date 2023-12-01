@@ -408,7 +408,7 @@ public class Foo: MonoBehaviour
 
 # TinyRPC
 
-TinyRPC is a lightweight RPC framework with no third-party dependencies that uses Socket + JsonUtility. Its goal is to provide a lightweight and easy-to-use RPC solution.
+TinyRPC is a lightweight network framework that uses TCP + JsonUtility + Task without any third-party dependencies. It supports RPC/general message distribution. Its goal is to provide a lightweight and easy-to-use RPC solution.
 
 Many aspects of this network framework have been inspired by [ET](https://github.com/egametang/ET), and I express my gratitude for that.
 
