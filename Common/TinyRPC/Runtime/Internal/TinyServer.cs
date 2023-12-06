@@ -91,7 +91,7 @@ namespace zFramework.TinyRPC
             var cached = new List<Session>(sessions);
             // as message will be recycled, we need to do some stuff to avoid it
             // hack message type to avoid it being recycled
-            // tell object pool a fack news that this message is recycled
+            // tell object pool a fake news that this message is recycled
             message.IsRecycled = true;
             foreach (var session in cached)
             {
