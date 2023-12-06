@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -12,6 +13,7 @@ namespace zFramework.TinyRPC
     // Receive port data of TinyRPC server instance from DiscoveryServer
     public class DiscoveryClient
     {
+        private readonly int port; // remote binding port
         private readonly string scope;
         private readonly UdpClient udpClient;
         private bool isRunning = true;
@@ -29,7 +31,7 @@ namespace zFramework.TinyRPC
         /// <summary>
         ///  网络发现客户端
         /// </summary>
-        /// <param name="port">监听的端口，DiscoveryServer 将向此端口广播</param>
+        /// <param name="port">DiscoveryServer 监听端口，请向此端口广播</param>
         /// <param name="scope">与服务器识别的简易标识符</param>
         /// <param name="context">事件投送到主线程</param>
         public DiscoveryClient(int port, string scope)
@@ -39,14 +41,16 @@ namespace zFramework.TinyRPC
             {
                 throw new ArgumentException("scope can not contains |");
             }
+            this.port = port;
             this.scope = scope;
             this.context = SynchronizationContext.Current;
-            udpClient = new UdpClient(port);
+            udpClient = new UdpClient();
             // log if instance create not at main thread
             if (Thread.CurrentThread.ManagedThreadId != 1)
             {
                 Debug.LogWarning($"{nameof(DiscoveryClient)}:  Discovery Client is not created at main thread, this may cause some problem!");
             }
+            ReceiveAsync();
         }
 
         public void Start()
@@ -57,8 +61,30 @@ namespace zFramework.TinyRPC
                 {
                     try
                     {
-                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Client {(isWaiting ? "Standby " : "Listening")}!");
+                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Client Is{(isWaiting ? "Waiting " : "Scanning")}!");
                         await WaitUntilAsync(() => !isWaiting);
+                        var bytes = Encoding.UTF8.GetBytes(scope);
+                        await udpClient.SendAsync(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, port));
+                        await Task.Delay(1500); // 1.5s 扫描间隔
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"{nameof(DiscoveryClient)}: quit,  exception = {e}");
+                        break;
+                    }
+                }
+            });
+        }
+
+        private void ReceiveAsync()
+        {
+            Task.Run(async () =>
+            {
+                while (isRunning)
+                {
+                    try
+                    {
+                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Client Is Wait For Server Echo !");
                         var result = await udpClient.ReceiveAsync();
                         if (result.Buffer.Length != 0)
                         {
@@ -71,11 +97,9 @@ namespace zFramework.TinyRPC
                                 {
                                     var host = result.RemoteEndPoint.Address.ToString();
                                     var ip = host.Split(':')[0];
+                                    isWaiting = true; //二话不说先卡住，等待外部主动解锁
+                                    Debug.Log($"{nameof(DiscoveryClient)}:  Server Discovered， ip = {ip}, port = {port}");
                                     context.Post(_ => OnServerDiscovered?.Invoke(ip, port), null);
-                                    Debug.Log($"{nameof(DiscoveryClient)}:  Discovery Server is discovered, ip = {ip}, port = {port}");
-                                    // 收到服务器发现信号后，稍作等待，为投送(Post)到主线程的 OnServerDiscovered 事件执行留出时间
-                                    // 这样能够尽可能地规避 isWaiting = true 设置前，OnServerDiscovered 会多次触发的问题
-                                    await Task.Delay(2000);
                                 }
                             }
                         }
@@ -88,6 +112,7 @@ namespace zFramework.TinyRPC
                 }
             });
         }
+
         public async Task WaitUntilAsync(Func<bool> predicate)
         {
             while (!predicate())

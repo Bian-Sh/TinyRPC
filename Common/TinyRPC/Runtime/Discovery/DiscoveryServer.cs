@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,17 +10,16 @@ namespace zFramework.TinyRPC
     public class DiscoveryServer
     {
         private readonly string scope;
-        private readonly UdpClient udpClient;
-        private readonly int port;
-        private bool isRunning = true;
         // 在 TinyRPC 中，这个数据是 TinyRPC 服务器实例的端口
-        private int data; 
+        private readonly int data;
+        private readonly UdpClient udpClient;
+        private bool isRunning = true;
 
 
         /// <summary>
         /// 构造函数。创建一个DiscoveryServer实例。
         /// </summary>
-        /// <param name="port">定向广播的端口，请与 DiscoveryClient 监听端口保持一致</param>
+        /// <param name="port">监听广播的端口</param>
         /// <param name="scope">与 DiscoveryClient 约定的身份识别码</param>
         /// <param name="data">广播的数据 </param>
         public DiscoveryServer(int port, string scope, int data)
@@ -31,33 +29,42 @@ namespace zFramework.TinyRPC
             {
                 throw new ArgumentException("scope can not contains |");
             }
-            this.port = port;
             this.scope = scope;
             this.data = data;
-            udpClient = new UdpClient();
+            udpClient = new UdpClient(port);
         }
-
         public void Start()
         {
             Task.Run(async () =>
             {
-                Debug.Log($"{nameof(DiscoveryServer)}:  DiscoveryServer started");
                 while (isRunning)
                 {
                     try
                     {
-                        var bytes = Encoding.UTF8.GetBytes($"{scope}|{data}");
-                        var ipendPoint = new IPEndPoint(IPAddress.Broadcast, port);
-                        await udpClient.SendAsync(bytes, bytes.Length, ipendPoint);
-                        await Task.Delay(2000);
+                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Server is Listening!");
+                        var result = await udpClient.ReceiveAsync();
+                        Debug.Log($"{nameof(DiscoveryServer)}: 11111");
+                        if (result.Buffer.Length != 0)
+                        {
+                            Debug.Log($"{nameof(DiscoveryServer)}: 222");
+                            var message = Encoding.UTF8.GetString(result.Buffer);
+                            // 校验消息是否来自指定的 DiscoveryServer ， 请设定专属的 scope
+                            if (message.Equals(scope))
+                            {
+                                Debug.Log($"{nameof(DiscoveryServer)}: 333");
+                                var report = $"{scope}|{data}";
+                                var bytes = Encoding.UTF8.GetBytes(report);
+                                await udpClient.SendAsync(bytes, bytes.Length, result.RemoteEndPoint);
+                                Debug.Log($"{nameof(DiscoveryClient)}:  Discovery Server Report To {result.RemoteEndPoint}");
+                            }
+                        }
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"{nameof(DiscoveryServer)}:  exception = {e}");
+                        Debug.LogWarning($"{nameof(DiscoveryClient)}: quit,  exception = {e}");
                         break;
                     }
                 }
-                Debug.Log($"{nameof(DiscoveryServer)}:  DiscoveryServer stopped");
             });
         }
         public void Stop()
