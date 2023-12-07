@@ -3,16 +3,20 @@
 <a id="chinese">[English](#english)</a>
 # TinyRPC
 
-TinyRPC 是一个使用 TCP + JsonUtility + Task 没有第三方依赖的简易网络框架，支持 RPC/常规 消息分发。它的目标是提供一个轻量级、易于使用的 RPC 解决方案。
+TinyRPC 是一个为 Unity 引擎准备的，没有第三方插件依赖、仅使用 TCP + JsonUtility + Task实现的极简 RPC 网络框架，支持 RPC/常规 消息分发。它的目标是提供一个轻量级、易于使用的网络通信解决方案。
 
-这个网络框架很多地方学习参考了 [ET](https://github.com/egametang/ET) ，在此表示感谢。
+这个网络框架很多地方学习、参考了 [ET](https://github.com/egametang/ET) ，在此表示感谢。
 
 基于 TinyRPC 的示例项目 ：[unity-drones-multiplayer-tinyrpc](https://github.com/Bian-Sh/unity-drones-multiplayer-tinyrpc)
+
+> 图片借用 [unity-drones-multiplayer](https://github.com/morsh/unity-drones-multiplayer)的配图, 图示内容不代表最终效果！
 
 ![](doc/preview.gif)
 
 
 # 特性
+
+* 支持局域网网络发现，提供了一个简单的测试用例，自动发现并连接到局域网内的服务器。
 
 * 支持``async await`` 异步逻辑同步写的语法糖，让你的代码更加简洁优雅且易读。
 
@@ -408,15 +412,19 @@ public class Foo: MonoBehaviour
 
 # TinyRPC
 
-TinyRPC is a lightweight network framework that uses TCP + JsonUtility + Task without any third-party dependencies. It supports RPC/general message distribution. Its goal is to provide a lightweight and easy-to-use RPC solution.
+TinyRPC is a LightWeight RPC network framework for Unity engine, which has no third-party plug-in dependencies and only uses TCP + JsonUtility + Task to implement RPC and regular message distribution. Its goal is to provide a lightweight and easy-to-use network communication solution.
 
 Many aspects of this network framework have been inspired by [ET](https://github.com/egametang/ET), and I express my gratitude for that.
 
 Sample project based on TinyRPC: [unity-drones-multiplayer-tinyrpc](https://github.com/Bian-Sh/unity-drones-multiplayer-tinyrpc)
 
+> The pictures are borrowed from [unity-drones-multiplayer](https://github.com/morsh/unity-drones-multiplayer),  what you see in the pictures does not represent the final effect!
+
 ![](doc/preview.gif)
 
 ## Features
+
+* Supports LAN network discovery, providing a simple test case that automatically discovers and connects to servers on the LAN.
 
 * Supports elegant coding using ``async await`` for asynchronous logic, making your code more concise and readable.
 

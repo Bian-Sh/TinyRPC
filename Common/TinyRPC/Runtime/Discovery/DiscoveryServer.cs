@@ -43,15 +43,12 @@ namespace zFramework.TinyRPC
                     {
                         Debug.Log($"{nameof(DiscoveryClient)}: Discovery Server is Listening!");
                         var result = await udpClient.ReceiveAsync();
-                        Debug.Log($"{nameof(DiscoveryServer)}: 11111");
                         if (result.Buffer.Length != 0)
                         {
-                            Debug.Log($"{nameof(DiscoveryServer)}: 222");
                             var message = Encoding.UTF8.GetString(result.Buffer);
                             // 校验消息是否来自指定的 DiscoveryServer ， 请设定专属的 scope
                             if (message.Equals(scope))
                             {
-                                Debug.Log($"{nameof(DiscoveryServer)}: 333");
                                 var report = $"{scope}|{data}";
                                 var bytes = Encoding.UTF8.GetBytes(report);
                                 await udpClient.SendAsync(bytes, bytes.Length, result.RemoteEndPoint);
