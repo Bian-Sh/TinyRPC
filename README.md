@@ -311,7 +311,6 @@ public class Foo: MonoBehaviour
 <root>
 |   
 +---Editor
-|   |   com.zframework.tinyrpc.editor.asmdef
 |   |   
 |   +---Analyzer
 |   |       MessageHandlerPostprocessor.cs
@@ -340,7 +339,6 @@ public class Foo: MonoBehaviour
 |           TinyRpcEditorSettings.cs
 |           
 \---Runtime
-    |   com.zframework.tinyrpc.runtime.asmdef
     |   
     +---Data
     |       IReusable.cs
@@ -350,6 +348,10 @@ public class Foo: MonoBehaviour
     |       RpcInfo.cs
     |       SerializeHelper.cs
     |       TinyRpcSettings.cs
+    |       
+    +---Discovery
+    |       DiscoveryClient.cs
+    |       DiscoveryServer.cs
     |       
     +---Exception
     |       InvalidSessionException.cs
@@ -708,7 +710,6 @@ Here is the file system tree of TinyRPC. Click to see the complete network archi
 <root>
 |   
 +---Editor
-|   |   com.zframework.tinyrpc.editor.asmdef
 |   |   
 |   +---Analyzer
 |   |       MessageHandlerPostprocessor.cs
@@ -737,7 +738,6 @@ Here is the file system tree of TinyRPC. Click to see the complete network archi
 |           TinyRpcEditorSettings.cs
 |           
 \---Runtime
-    |   com.zframework.tinyrpc.runtime.asmdef
     |   
     +---Data
     |       IReusable.cs
@@ -747,6 +747,10 @@ Here is the file system tree of TinyRPC. Click to see the complete network archi
     |       RpcInfo.cs
     |       SerializeHelper.cs
     |       TinyRpcSettings.cs
+    |       
+    +---Discovery
+    |       DiscoveryClient.cs
+    |       DiscoveryServer.cs
     |       
     +---Exception
     |       InvalidSessionException.cs

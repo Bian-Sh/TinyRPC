@@ -33,7 +33,6 @@ namespace zFramework.TinyRPC
         /// </summary>
         /// <param name="port">DiscoveryServer 监听端口，请向此端口广播</param>
         /// <param name="scope">与服务器识别的简易标识符</param>
-        /// <param name="context">事件投送到主线程</param>
         public DiscoveryClient(int port, string scope)
         {
             // 由于使用了 | 作为分隔符，所以需要对 scope 进行校验
@@ -97,7 +96,7 @@ namespace zFramework.TinyRPC
                                 {
                                     var host = result.RemoteEndPoint.Address.ToString();
                                     var ip = host.Split(':')[0];
-                                    isWaiting = true; //二话不说先卡住，等待外部主动解锁
+                                    isWaiting = true; //二话不说先卡住，保证事件只执行一次，是否解锁由调用方决定！
                                     Debug.Log($"{nameof(DiscoveryClient)}:  Server Discovered， ip = {ip}, port = {port}");
                                     context.Post(_ => OnServerDiscovered?.Invoke(ip, port), null);
                                 }

@@ -15,7 +15,6 @@ namespace zFramework.TinyRPC
         private readonly UdpClient udpClient;
         private bool isRunning = true;
 
-
         /// <summary>
         /// 构造函数。创建一个DiscoveryServer实例。
         /// </summary>
@@ -37,11 +36,11 @@ namespace zFramework.TinyRPC
         {
             Task.Run(async () =>
             {
+                Debug.Log($"{nameof(DiscoveryClient)}: Discovery Server is Listening!");
                 while (isRunning)
                 {
                     try
                     {
-                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Server is Listening!");
                         var result = await udpClient.ReceiveAsync();
                         if (result.Buffer.Length != 0)
                         {
