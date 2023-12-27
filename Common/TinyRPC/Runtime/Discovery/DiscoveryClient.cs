@@ -47,7 +47,7 @@ namespace zFramework.TinyRPC
             // log if instance create not at main thread
             if (Thread.CurrentThread.ManagedThreadId != 1)
             {
-                Debug.LogWarning($"{nameof(DiscoveryClient)}:  Discovery Client is not created at main thread, this may cause some problem!");
+                Debug.LogWarning($"{nameof(DiscoveryClient)} is not created at main thread, this may cause some problem!");
             }
             ReceiveAsync();
         }
@@ -56,13 +56,13 @@ namespace zFramework.TinyRPC
         {
             Task.Run(async () =>
             {
+                var bytes = Encoding.UTF8.GetBytes(scope);
                 while (isRunning)
                 {
                     try
                     {
-                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Client Is{(isWaiting ? "Waiting " : "Scanning")}!");
+                        Debug.Log($"{nameof(DiscoveryClient)} Is{(isWaiting ? "Waiting " : $"Scanning {port} ")}!");
                         await WaitUntilAsync(() => !isWaiting);
-                        var bytes = Encoding.UTF8.GetBytes(scope);
                         await udpClient.SendAsync(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, port));
                         await Task.Delay(1500); // 1.5s 扫描间隔
                     }
@@ -83,7 +83,7 @@ namespace zFramework.TinyRPC
                 {
                     try
                     {
-                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Client Is Wait For Server Echo !");
+                        Debug.Log($"{nameof(DiscoveryClient)} Is Wait For Server Echo !");
                         var result = await udpClient.ReceiveAsync();
                         if (result.Buffer.Length != 0)
                         {

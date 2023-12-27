@@ -14,6 +14,7 @@ namespace zFramework.TinyRPC
         private readonly int data;
         private readonly UdpClient udpClient;
         private bool isRunning = true;
+        private int port;
 
         /// <summary>
         /// 构造函数。创建一个DiscoveryServer实例。
@@ -30,13 +31,14 @@ namespace zFramework.TinyRPC
             }
             this.scope = scope;
             this.data = data;
+            this.port = port;
             udpClient = new UdpClient(port);
         }
         public void Start()
         {
             Task.Run(async () =>
             {
-                Debug.Log($"{nameof(DiscoveryClient)}: Discovery Server is Listening!");
+                Debug.Log($"{nameof(DiscoveryClient)} is Listening {port} !");
                 while (isRunning)
                 {
                     try
@@ -51,7 +53,7 @@ namespace zFramework.TinyRPC
                                 var report = $"{scope}|{data}";
                                 var bytes = Encoding.UTF8.GetBytes(report);
                                 await udpClient.SendAsync(bytes, bytes.Length, result.RemoteEndPoint);
-                                Debug.Log($"{nameof(DiscoveryClient)}:  Discovery Server Report To {result.RemoteEndPoint}");
+                                Debug.Log($"{nameof(DiscoveryClient)} Reply To {result.RemoteEndPoint}");
                             }
                         }
                     }
