@@ -38,7 +38,7 @@ namespace zFramework.TinyRPC
         {
             Task.Run(async () =>
             {
-                Debug.Log($"{nameof(DiscoveryClient)} is Listening {port} !");
+                Debug.Log($"{nameof(DiscoveryServer)} is Listening {port} !");
                 while (isRunning)
                 {
                     try
@@ -53,13 +53,13 @@ namespace zFramework.TinyRPC
                                 var report = $"{scope}|{data}";
                                 var bytes = Encoding.UTF8.GetBytes(report);
                                 await udpClient.SendAsync(bytes, bytes.Length, result.RemoteEndPoint);
-                                Debug.Log($"{nameof(DiscoveryClient)} Reply To {result.RemoteEndPoint}");
+                                Debug.Log($"{nameof(DiscoveryServer)} Reply To {result.RemoteEndPoint}");
                             }
                         }
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"{nameof(DiscoveryClient)}: quit,  exception = {e}");
+                        Debug.LogWarning($"{nameof(DiscoveryServer)}: quit,  exception = {e}");
                         break;
                     }
                 }
