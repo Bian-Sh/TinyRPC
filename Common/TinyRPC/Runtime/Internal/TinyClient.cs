@@ -12,7 +12,7 @@ namespace zFramework.TinyRPC
 {
     public class TinyClient
     {
-        public bool IsConnected => Session != null && Session.IsAlive;
+        public bool IsConnected => Session?.IsAlive == true;
         public Session Session { get; private set; }
         /// <summary>
         /// 当客户端连接成功时触发
