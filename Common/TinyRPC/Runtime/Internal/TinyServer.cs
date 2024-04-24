@@ -85,7 +85,7 @@ namespace zFramework.TinyRPC
             }
         }
 
-        public void Boardcast(Message message)
+        public void Broadcast(Message message)
         {
             // InvalidOperationException: Collection was modified; enumeration operation may not execute.
             var cached = new List<Session>(sessions);
@@ -102,7 +102,7 @@ namespace zFramework.TinyRPC
             cached.Clear();
         }
 
-        public void BoardcastOthers(Session self, Message message)
+        public void BroadcastOthers(Session self, Message message)
         {
             var cached = new List<Session>(sessions);
             cached.Remove(self);
