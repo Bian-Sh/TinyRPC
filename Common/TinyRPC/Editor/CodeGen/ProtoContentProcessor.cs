@@ -85,7 +85,9 @@ namespace zFramework.TinyRPC.Editor
                 sb.AppendLine($"{indent}/// <summary>");
                 foreach (var item in summarys)
                 {
-                    sb.AppendLine($"{indent}/// {item}");
+                    // replace < with &lt; and > with &gt;
+                    var summary = item.Replace("<", "&lt;").Replace(">", "&gt;");
+                    sb.AppendLine($"{indent}/// {summary}");
                 }
                 sb.AppendLine($"{indent}/// </summary>");
 
