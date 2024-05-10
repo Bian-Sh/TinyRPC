@@ -241,7 +241,8 @@ namespace zFramework.TinyRPC.Editor
         {
             // 保存新的文件夹
             currentLocationType = selectedLocationType;
-            settings.generatedScriptLocation = generatedScriptLocationProperty.stringValue = newLocation;
+            var trimpath = newLocation.Replace(Application.dataPath, "");
+            settings.generatedScriptLocation = generatedScriptLocationProperty.stringValue = trimpath;
             serializedObject.ApplyModifiedProperties();
             Save();
         }
