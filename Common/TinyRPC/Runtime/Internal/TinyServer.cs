@@ -129,17 +129,17 @@ namespace zFramework.TinyRPC
             }
             catch (RpcResponseException re)
             {
-                Debug.LogError($"{nameof(TinyClient)}: RPC Response Excption {re}");
+                Debug.LogError($"{nameof(TinyServer)}: RPC Response Excption {re}");
             }
             catch (RpcTimeoutException te)
             {
-                Debug.LogError($"{nameof(TinyClient)}: RPC Timeout {te}");
+                Debug.LogError($"{nameof(TinyServer)}: RPC Timeout {te}");
             }
             //未知异常直接关断会话
             //如果还有其他已知不应该关断会话的可以在这里插入
             catch (Exception e)
             {
-                Debug.LogError($"{nameof(TinyClient)}: RPC Error {e}");
+                Debug.LogError($"{nameof(TinyServer)}: RPC Error {e}");
                 HandleDisactiveSession(session);
             }
             return response;
