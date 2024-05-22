@@ -18,11 +18,14 @@ namespace zFramework.TinyRPC
         public bool IsServerSide { get; }
         public bool IsAlive { get; private set; }
         public IPEndPoint IPEndPoint { get; private set; }
+        private readonly TinyRpcSettings settings;
 
         internal Session(TcpClient client, SynchronizationContext context, bool isServerSide)
         {
             IsServerSide = isServerSide;
             this.client = client;
+            //Settings can only be created in main thread,Preload if needed
+            settings = TinyRpcSettings.Instance;
 
             // 深度拷贝 IPEndPoint 用于在任意时候描述 Session （只要这个 Session 还能被访问）
             var iPEndPoint = (IsServerSide ? client.Client.RemoteEndPoint : client.Client.LocalEndPoint) as IPEndPoint;
@@ -99,7 +102,7 @@ namespace zFramework.TinyRPC
             var tcs = new TaskCompletionSource<IResponse>();
             var cts = new CancellationTokenSource();
             //等待并给定特定时长的响应机会，这在发生复杂操作时很有效
-            var timeout = Mathf.Max(request.Timeout, TinyRpcSettings.Instance.rpcTimeout);
+            var timeout = Mathf.Max(request.Timeout, settings.rpcTimeout);
             cts.CancelAfter(timeout);
             var exception = new TimeoutException($"RPC Call Timeout! Request: {request}");
             cts.Token.Register(() =>
@@ -162,7 +165,7 @@ namespace zFramework.TinyRPC
         {
             var content = state as byte[];
             var message = SerializeHelper.Deserialize(content);
-            if (!TinyRpcSettings.Instance.logFilters.Contains(message.GetType().Name)) //Settings can only be created in main thread
+            if (!settings.logFilters.Contains(message.GetType().Name))
             {
                 Debug.Log($"{nameof(Session)}:   {(IsServerSide ? "Server" : "Client")} 收到网络消息 = {message.GetType().Name}  {message}");
             }

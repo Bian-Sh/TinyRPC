@@ -28,9 +28,11 @@ namespace zFramework.TinyRPC
         ///  <br>参数2：ping 值</br>
         /// </summary>
         public Action<float, int> OnPingCaculated;
+        private readonly TinyRpcSettings settings;
 
         public TinyClient(string ip, int port)
         {
+            settings = TinyRpcSettings.Instance;
             this.ip = ip;
             this.port = port;
             client = new TcpClient();
@@ -121,7 +123,7 @@ namespace zFramework.TinyRPC
                     // 服务器与客户端的时间差，用于在客户端上换算服务器时间
                     var delta = (response.time - ClientTime) / 10000.0f + ping / 2;
                     OnPingCaculated?.Invoke(delta, ping);
-                    await Task.Delay(TinyRpcSettings.Instance.pingInterval);//这个API 决定了必须在主线程调用
+                    await Task.Delay(settings.pingInterval);
                 }
                 // 只有当收到的异常是 RpcResponseException  或者 TimeoutException 时才重试
                 catch (Exception e) when (e is RpcResponseException || e is TimeoutException)
@@ -129,8 +131,8 @@ namespace zFramework.TinyRPC
                     Debug.LogError($"{nameof(TinyClient)}: Ping Error {e} ， retry count  = {count}");
                     count++;
                     //应该稍作延迟，这可能在网络状态得到缓和的情况下加大 ping 通的几率
-                    await Task.Delay(TinyRpcSettings.Instance.pingInterval);
-                    if (count > TinyRpcSettings.Instance.pingRetry)
+                    await Task.Delay(settings.pingInterval);
+                    if (count > settings.pingRetry)
                     {
                         Stop();
                         Debug.LogError($"{nameof(TinyClient)}: Ping Timeout ，Session is inactive!");
