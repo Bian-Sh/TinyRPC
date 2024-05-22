@@ -48,23 +48,23 @@ namespace zFramework.TinyRPC
         public async Task<bool> ConnectAsync()
         {
             return await Task.Run(async () =>
-             {
-                 try
-                 {
-                     await client.ConnectAsync(ip, port);
-                     if (source.IsCancellationRequested) return false;
-                     Session = new Session(client, context, false);
-                     context.Post(v => OnClientEstablished?.Invoke(), null);
-                     _ = Task.Run(ReceiveAsync);
-                     context.Post(v => _ = PingAsync(), null);
-                     return true;
-                 }
-                 catch (Exception e)
-                 {
-                     Debug.LogError($"连接服务器失败！{e}");
-                     return false;
-                 }
-             }, source.Token);
+            {
+                try
+                {
+                    await client.ConnectAsync(ip, port);
+                    if (source.IsCancellationRequested) return false;
+                    Session = new Session(client, context, false);
+                    context.Post(v => OnClientEstablished?.Invoke(), null);
+                    _ = Task.Run(ReceiveAsync);
+                    _ = Task.Run(PingAsync);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"连接服务器失败！{e}");
+                    return false;
+                }
+            }, source.Token);
         }
 
         public void Stop()
@@ -122,7 +122,7 @@ namespace zFramework.TinyRPC
                     var ping = (end - begin).Milliseconds;
                     // 服务器与客户端的时间差，用于在客户端上换算服务器时间
                     var delta = (response.time - ClientTime) / 10000.0f + ping / 2;
-                    OnPingCaculated?.Invoke(delta, ping);
+                    context.Post(state => OnPingCaculated?.Invoke(delta, ping), null);
                     await Task.Delay(settings.pingInterval);
                 }
                 // 只有当收到的异常是 RpcResponseException  或者 TimeoutException 时才重试

@@ -157,13 +157,12 @@ namespace zFramework.TinyRPC
                     throw new Exception("在读取网络消息时得到了不完整数据,会话断开！");
                 }
                 // 解析消息类型
-                context.Post(OnMessageReceived, body);
+                OnMessageReceived(body);
             }
         }
 
-        private void OnMessageReceived(object state)
+        private void OnMessageReceived(byte[] content)
         {
-            var content = state as byte[];
             var message = SerializeHelper.Deserialize(content);
             if (!settings.logFilters.Contains(message.GetType().Name))
             {
