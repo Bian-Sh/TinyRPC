@@ -20,6 +20,8 @@ namespace zFramework.TinyRPC
         public IPEndPoint IPEndPoint { get; private set; }
         private readonly TinyRpcSettings settings;
 
+        //todo: TcpClient will be replaced by Transport, so that we can use other transport protocol such as kcp and websocket
+        //todo: TcpClient 将被 Transport 替换，这样我们就可以使用其他传输协议，如 kcp 和 websocket
         internal Session(TcpClient client, SynchronizationContext context, bool isServerSide)
         {
             IsServerSide = isServerSide;
