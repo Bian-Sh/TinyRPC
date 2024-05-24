@@ -11,7 +11,7 @@ namespace zFramework.TinyRPC.Settings
         public List<string> assemblyNames = new() { "Assembly-CSharp" };
 
         //filter log message, default is Ping (do not use full type name)
-        public List<string> logFilters = new() { "Ping" };
+        public List<string> logFilters = new() { "Ping" }; //todo：使用字典，使用 Filter{enable；key}
 
         public int pingInterval = 1000;
 
@@ -19,9 +19,8 @@ namespace zFramework.TinyRPC.Settings
 
         public int rpcTimeout = 5000;
 
-        [Header("开启log (应用于 PostProcessor)")]
-        public bool logEnabled;
-
+        [Header("开启log ")] 
+        public bool logEnabled; // todo: 使用 UnityEngine.LogType 判定 log level , 包裹一层，点击回到原先log输出的地方
 
         private void Awake() => _instance = this;
 
