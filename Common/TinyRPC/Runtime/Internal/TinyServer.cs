@@ -174,7 +174,6 @@ namespace zFramework.TinyRPC
         #region Ping Message Handler
         internal static async Task OnPingReceived(Session session, Ping request, Ping response)
         {
-            response.Rid = request.Rid;
             response.time = ServerTime;
             await Task.CompletedTask;
         }
