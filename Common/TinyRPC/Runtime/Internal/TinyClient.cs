@@ -123,6 +123,7 @@ namespace zFramework.TinyRPC
                     // 服务器与客户端的时间差，用于在客户端上换算服务器时间
                     var delta = (response.time - ClientTime) / 10000.0f + ping / 2;
                     context.Post(state => OnPingCaculated?.Invoke(delta, ping), null);
+                    Recycle(response);
                     await Task.Delay(settings.pingInterval);
                 }
                 // 只有当收到的异常是 RpcResponseException  或者 TimeoutException 时才重试
