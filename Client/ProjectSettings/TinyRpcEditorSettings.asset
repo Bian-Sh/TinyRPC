@@ -15,6 +15,5 @@ MonoBehaviour:
   protos:
   - {fileID: 102900000, guid: 3762a0735ef55eb43a7a8a251322eb18, type: 3}
   - {fileID: 102900000, guid: bffe1460fc42c8d45a79af7b643d7c93, type: 3}
-  generatedScriptLocation: E:/Unity/Temp/TinyRPC/Client/Assets/../../Common/TinyRPC
-    Generated
+  generatedScriptLocation: /../../Common/TinyRPC Generated
   indentWithTab: 0

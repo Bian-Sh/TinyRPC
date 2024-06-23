@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -178,10 +177,20 @@ namespace zFramework.TinyRPC.Editor
             rt.x = (window.position.width - rt.width) / 2;
             rt.y = window.position.height - rt.height - 10;
 
-            if (GUI.Button(rt, generateBt_cnt))
+            var isCompiling = EditorApplication.isCompiling;
+            generateBt_cnt.tooltip = isCompiling ? "编译中，请稍后..." : "点击根据 .proto 生成消息实体类";
+            using (var disablescop = new EditorGUI.DisabledScope(isCompiling))
             {
-                await HandlerMessageGenerateAsync();
-                PostProcess();
+                if (GUI.Button(rt, generateBt_cnt))
+                {
+                    //todo：成代码前要求工程不得有任何编译异常
+                    //if (EditorUtility.DisplayDialog("警告", "代码生成未执行，请先确保工程没有编译错误！", "确定"))
+                    //{
+                    //    return;
+                    //}
+                    await HandlerMessageGenerateAsync();
+                    PostProcess();
+                }
             }
         }
 
@@ -254,7 +263,7 @@ namespace zFramework.TinyRPC.Editor
                 LocationType.Project => $"{Application.dataPath}/../../{subLocation}/TinyRPC Generated".Replace("//", "/"),
                 LocationType.Assets => "Assets/TinyRPC/Generated",
                 LocationType.Packages => "Packages/TinyRPC Generated",
-                _ => "Assets/TinyRPC/Generated",
+                _ => "Packages/TinyRPC Generated",
             };
 
             if (settings.protos.Count(p => p != null) == 0)
@@ -263,9 +272,15 @@ namespace zFramework.TinyRPC.Editor
             }
 
             //Create brand new  
-            if (Directory.Exists(newLocation))
+            // Proto 文件夹不允许删除
+            var dirs = Directory.GetDirectories(newLocation);
+            foreach (var dir in dirs)
             {
-                Directory.Delete(newLocation, true);
+                if (dir.EndsWith("Proto"))
+                {
+                    continue;
+                }
+                Directory.Delete(dir, true);
             }
 
             if (!Directory.Exists(newLocation))
@@ -401,6 +416,7 @@ namespace zFramework.TinyRPC.Editor
             }
         }
 
+        //todo：编辑器界面提供列表，用户可以指定需要插入的 Asmdef 文件，方便用户自己维护插件的引用关系
         /// <summary>
         /// 为降低反射遍历消息的次数、减小编译时长，故使用 AssemblyDefinition 
         /// </summary>
@@ -472,7 +488,7 @@ namespace zFramework.TinyRPC.Editor
         GUIContent indentwithtab_content = new("使用 Tab 缩进", "取消勾选使用 4 个空格代表一个 Tab (visual studio)");
         GUIContent initBt_cnt = new GUIContent("请选择 proto 文件", "请选择用于生成 .cs 实体类的 proto 文件");
         GUIContent updateBt_cnt = new GUIContent("更新", "选择新的 proto 文件，如果此文件在工程外，将会复制到工程内，覆盖原有的 proto 文件");
-        GUIContent generateBt_cnt = new GUIContent("生成消息实体类", "点击将在你选择的存储文件夹根据 proto 生成消息实体类");
+        GUIContent generateBt_cnt = new GUIContent("生成消息实体类", "");
         GUIContent showFolderBt_cnt = new GUIContent("Show", "Show in Explorer");
         GUIContent tips = new GUIContent("操作完成，请等待编译...");
         string notice = @"1. 选择的 .proto 文件不在工程中则拷贝至工程中
