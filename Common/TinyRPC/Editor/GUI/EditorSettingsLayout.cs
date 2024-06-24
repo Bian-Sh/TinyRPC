@@ -178,16 +178,22 @@ namespace zFramework.TinyRPC.Editor
             rt.y = window.position.height - rt.height - 10;
 
             var isCompiling = EditorApplication.isCompiling;
-            generateBt_cnt.tooltip = isCompiling ? "编译中，请稍后..." : "点击根据 .proto 生成消息实体类";
-            using (var disablescop = new EditorGUI.DisabledScope(isCompiling))
+            generateBt_cnt.text = isCompiling ? "编译中，请稍后..." : "生成消息实体类";
+            var isCompilefailed = EditorUtility.scriptCompilationFailed;
+            if (isCompilefailed)
+            {
+                generateBt_cnt.text = "请先解决工程编译错误...";
+            }
+            using (var disablescop = new EditorGUI.DisabledScope(isCompiling || isCompilefailed))
             {
                 if (GUI.Button(rt, generateBt_cnt))
                 {
-                    //todo：成代码前要求工程不得有任何编译异常
-                    //if (EditorUtility.DisplayDialog("警告", "代码生成未执行，请先确保工程没有编译错误！", "确定"))
-                    //{
-                    //    return;
-                    //}
+                    //生成代码前要求工程不得有任何编译异常
+                    if (EditorUtility.scriptCompilationFailed)
+                    {
+                        Debug.LogError($"代码生成失败，请先解决工程编译错误！");
+                        return;
+                    }
                     await HandlerMessageGenerateAsync();
                     PostProcess();
                 }
