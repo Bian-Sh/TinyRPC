@@ -1,11 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.PackageManager;
-using UnityEditorInternal;
 using UnityEngine;
 namespace zFramework.TinyRPC.Editor
 {
@@ -15,9 +15,12 @@ namespace zFramework.TinyRPC.Editor
         EditorWindow window;
         SerializedObject serializedObject;
         SerializedProperty protoProperty;
+        SerializedProperty asmdefsProperty;
         SerializedProperty indentWithTabProperty;
         SerializedProperty generatedScriptLocationProperty;
         const string ProtoLocation = "Assets/TinyRPC/Proto";
+        private const string AsmdefName = "com.zframework.tinyrpc.generated.asmdef";
+        private const string TinyRPCRuntimeAssembly = "GUID:c5a44f231aee9ef4895a10427e883834";
         LocationType selectedLocationType, currentLocationType;
         string newLocation;
         string subLocation = "Common";
@@ -35,8 +38,23 @@ namespace zFramework.TinyRPC.Editor
                 subLocation = ExtractSubLocation(settings.generatedScriptLocation);
             }
             protoProperty = serializedObject.FindProperty(nameof(settings.protos));
+            asmdefsProperty = serializedObject.FindProperty(nameof(settings.assemblies));
             indentWithTabProperty = serializedObject.FindProperty(nameof(settings.indentWithTab));
             generatedScriptLocationProperty = serializedObject.FindProperty(nameof(settings.generatedScriptLocation));
+
+            ResolveLocation();
+        }
+
+        private void ResolveLocation()
+        {
+            //根据 type 获取新的文件夹
+            newLocation = selectedLocationType switch
+            {
+                LocationType.Project => $"{Application.dataPath}/../../{subLocation}/TinyRPC Generated".Replace("//", "/"),
+                LocationType.Assets => "Assets/TinyRPC/Generated",
+                LocationType.Packages => "Packages/TinyRPC Generated",
+                _ => "Packages/TinyRPC Generated",
+            };
         }
 
         public void Draw()
@@ -49,18 +67,13 @@ namespace zFramework.TinyRPC.Editor
             serializedObject.Update();
 
             using var changescope = new EditorGUI.ChangeCheckScope();
-            if (protoProperty.arraySize == 0)
-            {
-                DrawArrayEmptyInterface();
-            }
-            else
-            {
-                DrawMainContent();
-                DrawIndentToggle();
-                DrawCodeGenerateButton();
-            }
+            DrawMainContent();
+            DrawIndentToggle();
+            DrawCodeGenerateButton();
             if (changescope.changed)
             {
+                Debug.Log($"{nameof(EditorSettingsLayout)}: 发生了变化.....");
+                //如果修改了消息存储位置，或者父节点有变化，都需要重新更新 NewLocation
                 serializedObject.ApplyModifiedProperties();
                 Save();
             }
@@ -124,27 +137,39 @@ namespace zFramework.TinyRPC.Editor
                     EditorGUILayout.HelpBox(error, UnityEditor.MessageType.Error);
                 }
             }
+
             if (selectedLocationType != currentLocationType)
             {
                 // draw waring helpbox : 选择了新的消息存储位置，在下次生成代码时生效 
                 EditorGUILayout.HelpBox("选择了新的消息存储位置，在下次生成代码时生效", UnityEditor.MessageType.Warning);
+                ResolveLocation();
             }
             EditorGUILayout.PropertyField(protoProperty, true);
-            DrawEditorHelpbox();
-        }
-
-        private void DrawArrayEmptyInterface()
-        {
-            //获取当前 editorwindow 宽高
-            var rect = EditorGUILayout.GetControlRect();
-            rect.height = 48;
-            rect.width = 200;
-            rect.x = (window.position.width - rect.width) / 2;
-            rect.y = (window.position.height - rect.height) / 2;
-            if (GUI.Button(rect, initBt_cnt))
+            // 如果用户插入或者删除了 .asmdef 文件，需要重新生成 .asmdef 文件
+            using (var changeScope = new EditorGUI.ChangeCheckScope())
             {
-                SelectAndLoadProtoFile();
+                EditorGUILayout.PropertyField(asmdefsProperty, true);
+                if (changeScope.changed)
+                {
+                    //从 asmdefsProperty 中提取所有的引用
+                    var arrsize = asmdefsProperty.arraySize;
+                    Debug.Log($"{nameof(EditorSettingsLayout)}: asmdef 发生变化，count = {arrsize}");
+                    { // 没有值的状态也要更新
+                        var references = new List<string>(arrsize);
+                        for (int i = 0; i < arrsize; i++)
+                        {
+                            var asmdef = asmdefsProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+                            if (asmdef)
+                            {
+                                references.Add($"GUID:{AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(asmdef))}");
+                            }
+                        }
+                        Debug.Log($"{nameof(EditorSettingsLayout)}: newLocation{newLocation}");
+                        AddAssemblyReference(newLocation, references);
+                    }
+                }
             }
+            DrawEditorHelpbox();
         }
 
         private void DrawEditorHelpbox()
@@ -263,15 +288,6 @@ namespace zFramework.TinyRPC.Editor
         }
         private void CreateNewPackage()
         {
-            //根据 type 获取新的文件夹
-            newLocation = selectedLocationType switch
-            {
-                LocationType.Project => $"{Application.dataPath}/../../{subLocation}/TinyRPC Generated".Replace("//", "/"),
-                LocationType.Assets => "Assets/TinyRPC/Generated",
-                LocationType.Packages => "Packages/TinyRPC Generated",
-                _ => "Packages/TinyRPC Generated",
-            };
-
             if (settings.protos.Count(p => p != null) == 0)
             {
                 throw new Exception("请先选择 .proto 文件！");
@@ -388,59 +404,71 @@ namespace zFramework.TinyRPC.Editor
 
             return subLocation;
         }
-        private void SelectAndLoadProtoFile()
-        {
-            var path = EditorUtility.OpenFilePanelWithFilters("请选择 .proto 文件", Application.dataPath, new string[] { "Protobuf file", "proto" });
-            if (!string.IsNullOrEmpty(path))
-            {
-                try
-                {
-                    var relatedPath = FileUtil.GetProjectRelativePath(path);
-                    //.proto 文件不在工程内，则拷贝到工程中,且覆盖原有的 proto 文件
-                    // 如果在工程内，则不做处理，尊重用户随意存放的权力
-                    if (string.IsNullOrEmpty(relatedPath))
-                    {
-                        var fileName = Path.GetFileName(path);
-                        relatedPath = $"{ProtoLocation}/{fileName}";
-                        if (!Directory.Exists(ProtoLocation))
-                        {
-                            Directory.CreateDirectory(ProtoLocation);
-                        }
-                        File.Copy(path, relatedPath, true);
-                        AssetDatabase.Refresh();
-                    }
-                    var proto = AssetDatabase.LoadAssetAtPath<DefaultAsset>(relatedPath);
-                    protoProperty.arraySize = 1;
-                    protoProperty.GetArrayElementAtIndex(0).objectReferenceValue = proto;
-                    serializedObject.ApplyModifiedProperties();
-                    TinyRpcEditorSettings.Save();
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
-                }
-            }
-        }
 
-        //todo：编辑器界面提供列表，用户可以指定需要插入的 Asmdef 文件，方便用户自己维护插件的引用关系
         /// <summary>
         /// 为降低反射遍历消息的次数、减小编译时长，故使用 AssemblyDefinition 
         /// </summary>
         /// <param name="root">生成脚本的根节点路径</param>
         private void TryCreateAssemblyDefinitionFile(string path)
         {
-            string name = "com.zframework.tinyrpc.generated.asmdef";
-            string content = @"{
-    ""name"": ""com.zframework.tinyrpc.generated"",
-    ""references"": [
-        ""GUID:c5a44f231aee9ef4895a10427e883834""
-    ],
-    ""autoReferenced"": true
-}";
-            var file = Path.Combine(path, name);
+            var file = Path.Combine(path, AsmdefName);
             if (!File.Exists(file))
             {
+                var references = settings.assemblies
+                    .Where(v => v) // 不为null
+                    .Select(v => $"GUID:{AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(v))}")
+                    .ToList();
+
+                var asmdef = new SimpleAssemblyDefinitionFile
+                {
+                    name = "com.zframework.tinyrpc.generated",
+                    autoReferenced = true,
+                    references = new List<string>
+                    {
+                        TinyRPCRuntimeAssembly
+                    }
+                };
+
+                asmdef.references.AddRange(references);
+                var content = JsonUtility.ToJson(asmdef, true);
                 File.WriteAllText(file, content, Encoding.UTF8);
+            }
+        }
+
+        /// <summary>
+        /// 添加程序集引用到指定路径的 .asmdef 文件中
+        /// </summary>
+        /// <param name="path">指定路径</param>
+        /// <param name="references">要添加的引用列表</param>
+        private void AddAssemblyReference(string path, List<string> references)
+        {
+            var file = Path.Combine(path, AsmdefName);
+            if (File.Exists(file))
+            {
+                var asmdef = JsonUtility.FromJson<SimpleAssemblyDefinitionFile>(File.ReadAllText(file));
+                var isDirty = false;
+                var toRemove = asmdef.references.Where(v => !references.Contains(v) && v != TinyRPCRuntimeAssembly).ToList();
+                foreach (var item in toRemove)
+                {
+                    asmdef.references.Remove(item);
+                    isDirty = true;
+                }
+
+                var toAdd = references.Where(v => !asmdef.references.Contains(v)).ToList();
+                foreach (var item in toAdd)
+                {
+                    asmdef.references.Add(item);
+                    isDirty = true;
+                }
+
+                if (isDirty)
+                {
+                    var content = JsonUtility.ToJson(asmdef, true);
+                    File.WriteAllText(file, content, Encoding.UTF8);
+                    // 重新导入 .asmdef 文件
+                    var packagePath = currentLocationType != LocationType.Assets ? "Packages/com.zframework.tinyrpc.generated" : path;
+                    AssetDatabase.ImportAsset($"{packagePath}/{AsmdefName}");
+                }
             }
         }
 
@@ -497,10 +525,9 @@ namespace zFramework.TinyRPC.Editor
         GUIContent generateBt_cnt = new GUIContent("生成消息实体类", "");
         GUIContent showFolderBt_cnt = new GUIContent("Show", "Show in Explorer");
         GUIContent tips = new GUIContent("操作完成，请等待编译...");
-        string notice = @"1. 选择的 .proto 文件不在工程中则拷贝至工程中
-2. 拷贝的副本只存在一份，永远执行覆盖操作
-3. 选择的 .proto 文件位于工程中则不做上述处理
-4.  proto 文件中的语法是基于 proto3 语法的变体（精简版）";
+        string notice = @"1. 基于 proto3 语法魔改版，跟谷歌Protobuf没任何关系
+2. 支持为生成代码引用 .asmdef 定义的程序集
+3. .proto 文件不能以 “Proto” 命名";
         #endregion
     }
 }
