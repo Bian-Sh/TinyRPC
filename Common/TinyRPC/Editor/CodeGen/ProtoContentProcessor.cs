@@ -366,6 +366,11 @@ namespace zFramework.TinyRPC.Editor
             for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i].Trim();
+                // skip line start with "#" , it's  region comment
+                if (line.StartsWith("#"))
+                {
+                    continue;
+                }
                 //use keyword "message" instead of "{" for checking whether inside message or not
                 if (string.IsNullOrEmpty(line) || line == "{")
                 {
