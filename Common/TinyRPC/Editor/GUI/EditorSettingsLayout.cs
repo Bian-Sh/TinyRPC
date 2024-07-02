@@ -7,8 +7,11 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
+    // 一个操作一个动作，当切换消息存储位置时，立马 Move Dir
+    // 生成代码时，先删除之前的代码，再生成新的代码
+    // 移动文件夹时，需要一并移动 Proto 文件夹
     public class EditorSettingsLayout
     {
         TinyRpcEditorSettings settings;
@@ -62,6 +65,7 @@ namespace zFramework.TinyRPC.Editor
 
         public void Draw()
         {
+
             //编辑器下切换场景时，settings 会被置空，故重新获取
             if (null == serializedObject || !serializedObject.targetObject)
             {
@@ -154,7 +158,6 @@ namespace zFramework.TinyRPC.Editor
                 {
                     //从 asmdefsProperty 中提取所有的引用
                     var arrsize = asmdefsProperty.arraySize;
-                    Debug.Log($"{nameof(EditorSettingsLayout)}: asmdef 发生变化，count = {arrsize}");
                     { // 没有值的状态也要更新
                         var references = new List<string>(arrsize);
                         for (int i = 0; i < arrsize; i++)
@@ -318,11 +321,11 @@ namespace zFramework.TinyRPC.Editor
             var protos = settings.protos;
             foreach (var proto in protos)
             {
-                if (proto)
+                if (proto.file && proto.enable)
                 {
-                    var protoPath = AssetDatabase.GetAssetPath(proto);
+                    var protoPath = AssetDatabase.GetAssetPath(proto.file);
                     var protoContent = File.ReadAllText(protoPath);
-                    TinyProtoHandler.Proto2CS(proto.name, protoContent, newLocation, settings);
+                    TinyProtoHandler.Proto2CS(proto.file.name, protoContent, newLocation, settings);
                 }
             }
             TryCreatePackageJsonFile(newLocation);
@@ -333,20 +336,17 @@ namespace zFramework.TinyRPC.Editor
             var current = settings.generatedScriptLocation;
             current = currentLocationType == LocationType.Project ? Path.Combine(Application.dataPath, current) : FileUtil.GetPhysicalPath(current);
 
-            //删除现有的文件夹
-            if (Directory.Exists(current))
+            // todo: 使用 MoveFileOrDirectory 代替删除，如果移动失败，可以提示用户关闭占用文件的程序 后继续
+            try
             {
-                FileUtil.DeleteFileOrDirectory(current);
-                var meta = $"{current}.meta";
-                if (File.Exists(meta))
+                if (Directory.Exists(current))
                 {
-                    // 删除 meta 文件
-                    FileUtil.DeleteFileOrDirectory(meta);
+                    FileUtil.MoveFileOrDirectory(current, newLocation);
                 }
             }
-            else
+            catch (Exception e)
             {
-                Debug.Log($"{nameof(EditorSettingsLayout)}: can not find dir named {current}");
+                Debug.LogError($"转移 Generated 文件夹失败，请先关闭可能占用文件的程序后重试 :{e} ");
             }
 
             if (currentLocationType != LocationType.Assets)
