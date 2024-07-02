@@ -18,6 +18,8 @@ namespace zFramework.TinyRPC.Editor
         SerializedProperty asmdefsProperty;
         SerializedProperty indentWithTabProperty;
         SerializedProperty generatedScriptLocationProperty;
+        SerializedProperty generateAsPartialClassProperty;
+
         const string ProtoLocation = "Assets/TinyRPC/Proto";
         private const string AsmdefName = "com.zframework.tinyrpc.generated.asmdef";
         private const string TinyRPCRuntimeAssembly = "GUID:c5a44f231aee9ef4895a10427e883834";
@@ -41,6 +43,7 @@ namespace zFramework.TinyRPC.Editor
             asmdefsProperty = serializedObject.FindProperty(nameof(settings.assemblies));
             indentWithTabProperty = serializedObject.FindProperty(nameof(settings.indentWithTab));
             generatedScriptLocationProperty = serializedObject.FindProperty(nameof(settings.generatedScriptLocation));
+            generateAsPartialClassProperty = serializedObject.FindProperty(nameof(settings.generateAsPartialClass));
 
             ResolveLocation();
         }
@@ -72,8 +75,6 @@ namespace zFramework.TinyRPC.Editor
             DrawCodeGenerateButton();
             if (changescope.changed)
             {
-                Debug.Log($"{nameof(EditorSettingsLayout)}: 发生了变化.....");
-                //如果修改了消息存储位置，或者父节点有变化，都需要重新更新 NewLocation
                 serializedObject.ApplyModifiedProperties();
                 Save();
             }
@@ -140,7 +141,7 @@ namespace zFramework.TinyRPC.Editor
 
             if (selectedLocationType != currentLocationType)
             {
-                // draw waring helpbox : 选择了新的消息存储位置，在下次生成代码时生效 
+                // todo : 选择了直接提醒是否转移，是，转移，否，不转移 ，不会是下次生成代码时生效
                 EditorGUILayout.HelpBox("选择了新的消息存储位置，在下次生成代码时生效", UnityEditor.MessageType.Warning);
                 ResolveLocation();
             }
@@ -169,6 +170,8 @@ namespace zFramework.TinyRPC.Editor
                     }
                 }
             }
+            // 如果用户指定了需要生成 partial class 的消息
+            EditorGUILayout.PropertyField(generateAsPartialClassProperty, true);
             DrawEditorHelpbox();
         }
 
@@ -316,7 +319,7 @@ namespace zFramework.TinyRPC.Editor
                 {
                     var protoPath = AssetDatabase.GetAssetPath(proto);
                     var protoContent = File.ReadAllText(protoPath);
-                    TinyProtoHandler.Proto2CS(proto.name, protoContent, newLocation);
+                    TinyProtoHandler.Proto2CS(proto.name, protoContent, newLocation, settings);
                 }
             }
             TryCreatePackageJsonFile(newLocation);

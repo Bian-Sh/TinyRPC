@@ -13,10 +13,10 @@ namespace zFramework.TinyRPC.Editor
     //4. 生成界面会扫描并显示需要用户指定 assembly definition file 和 namespace 的类型并提示用户补充
     //5. 过程中如果发生异常，会立刻停止并提示错误信息，只有无异常情况下才会生成代码，避免这方面导致的编译错误
     //6. 看有没有可能单独的为 proto 文件生成代码的代码进行编译并添加 dll 到项目中（Library/Assemblies）
-    
+
     public static class TinyProtoHandler
     {
-        public static void Proto2CS(string protoName,string protoContent, string outputPath)
+        public static void Proto2CS(string protoName, string protoContent, string outputPath,TinyRpcEditorSettings settings)
         {
             protoContent = protoContent.Replace("\r\n", "\n");
             // split into message blocks by }
@@ -27,7 +27,7 @@ namespace zFramework.TinyRPC.Editor
                 return;
             }
             var root = Path.Combine(outputPath, protoName);
-            var processor = new ProtoContentProcessor(protoName);
+            var processor = new ProtoContentProcessor(protoName, settings);
             foreach (var info in blocks)
             {
                 //skip empty block
@@ -35,7 +35,7 @@ namespace zFramework.TinyRPC.Editor
                 {
                     continue;
                 }
-                var scriptInfo =processor.ResolveBlockInfo(info);
+                var scriptInfo = processor.ResolveBlockInfo(info);
                 string csPath = Path.Combine(root, $"{scriptInfo.type}/{scriptInfo.name}.cs");
                 var dir = Path.GetDirectoryName(csPath);
                 if (!Directory.Exists(dir))

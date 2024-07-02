@@ -17,6 +17,8 @@ namespace zFramework.TinyRPC.Editor
         // 其中，Common 为新增的父节点
         [Tooltip("为生成的脚本添加自定义引用")]
         public List<AssemblyDefinitionAsset> assemblies;
+        [Tooltip("将该列表中出现的 Common 消息生成 partial class 类型而不是默认的 struct 类型, 如果出现 \"*\" 则全部生成 partial class 类型...")]
+        public List<string> generateAsPartialClass;
     }
 }
 
