@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using zFramework.TinyRPC.Settings;
 
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     public class RuntimeSettingsLayout
     {

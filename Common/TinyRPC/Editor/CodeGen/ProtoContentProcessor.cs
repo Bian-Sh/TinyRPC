@@ -3,7 +3,7 @@ using System.Text;
 using System;
 using UnityEngine;
 using System.Linq;
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     /*
      该脚本实现了对传入 proto line 进行处理

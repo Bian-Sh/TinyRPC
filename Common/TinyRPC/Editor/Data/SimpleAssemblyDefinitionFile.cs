@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System;
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     [Serializable]
     public class SimpleAssemblyDefinitionFile

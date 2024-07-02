@@ -11,7 +11,7 @@ using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 // Runtime Tab, Assembly 列表存 string 但展示 AssemblyDefinitionFile ，方便 Ping
 // Runtime Tab ,Log Filter 高级下拉窗口选择要过滤的消息
 
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     public class TinyRpcEditorWindow : EditorWindow
     {

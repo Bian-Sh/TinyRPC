@@ -1,4 +1,4 @@
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     public class ScriptInfo
     {

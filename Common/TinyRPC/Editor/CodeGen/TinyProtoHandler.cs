@@ -4,7 +4,7 @@ using System;
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     //todo: 代码生成相关
     //1. .proto 文件应该与生成的脚本放一起，方便 git 等源代码管理

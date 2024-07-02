@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     public class ScriptableSingleton<T> : ScriptableObject where T : ScriptableObject
     {

@@ -1,14 +1,14 @@
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using zFramework.TinyRPC.Settings;
 
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     [FilePath("ProjectSettings/TinyRpcEditorSettings.asset")]
     public class TinyRpcEditorSettings : ScriptableSingleton<TinyRpcEditorSettings>
     {
-        public List<DefaultAsset> protos;
+        public List<ProtoAsset> protos;
         public string generatedScriptLocation= "Packages/TinyRPC Generated";
         public bool indentWithTab;
         //消息存 Project 同级目录时允许新增父节点
@@ -19,10 +19,7 @@ namespace zFramework.TinyRPC.Editor
         public List<AssemblyDefinitionAsset> assemblies;
         [Tooltip("将该列表中出现的 Common 消息生成 partial class 类型而不是默认的 struct 类型, 如果出现 \"*\" 则全部生成 partial class 类型...")]
         public List<string> generateAsPartialClass;
+        
     }
 }
 
-public class ProtoAsset : TextAsset 
-{
-
-}
