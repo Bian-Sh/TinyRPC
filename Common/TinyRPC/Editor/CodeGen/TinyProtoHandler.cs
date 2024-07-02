@@ -2,6 +2,8 @@ using System.IO;
 using System.Text;
 using System;
 using UnityEngine;
+using UnityEditor;
+using System.Collections.Generic;
 namespace zFramework.TinyRPC.Editor
 {
     //todo: 代码生成相关
@@ -43,6 +45,19 @@ namespace zFramework.TinyRPC.Editor
                 using FileStream txt = new FileStream(csPath, FileMode.Create, FileAccess.ReadWrite);
                 using StreamWriter sw = new StreamWriter(txt, Encoding.UTF8);
                 sw.Write(scriptInfo.content);
+            }
+        }
+
+        //添加 .proto 文件到 IDE 资源管理器，双击可使用 Unity 默认的 IDE 打开
+        [InitializeOnLoadMethod]
+        static void MarkProtoFileAsAdditionalExtension()
+        {
+            var extensions = new List<string>(EditorSettings.projectGenerationUserExtensions);
+            if (!extensions.Contains("proto"))
+            {
+                extensions.Add("proto");
+                EditorSettings.projectGenerationUserExtensions = extensions.ToArray();
+                Debug.Log($"{nameof(TinyProtoHandler)}: 添加 \".proto\" 文件到 ide 编辑器资源管理器，双击 .proto 可以直接使用 IDE 编辑。");
             }
         }
     }
