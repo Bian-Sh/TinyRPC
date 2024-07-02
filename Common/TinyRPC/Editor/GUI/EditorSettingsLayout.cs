@@ -204,6 +204,8 @@ namespace zFramework.TinyRPC.Editor
         {
             try
             {
+                // 不允许刷新资产
+                AssetDatabase.DisallowAutoRefresh();
                 CreateNewPackage();
                 //its new one , we should del the previours package
                 // and save new location as well
@@ -216,6 +218,8 @@ namespace zFramework.TinyRPC.Editor
                 {
                     var identifier = selectedLocationType == LocationType.Project ?
                         $"file:../../{subLocation}/TinyRPC Generated" : $"file:Packages/TinyRPC Generated";
+                    // TODO:直接 Reimport ? 
+                    //AssetDatabase.ImportAsset("Packages/floder", ImportAssetOptions.ImportRecursive);
                     var error = await Client.Add(identifier);
                     if (string.IsNullOrEmpty(error))
                     {
@@ -226,8 +230,8 @@ namespace zFramework.TinyRPC.Editor
                         Debug.Log($"{nameof(EditorSettingsLayout)}: add upm package failed! {error}");
                     }
                 }
-                //location type changed  or  type is not  "assets"  is need to resolve packages every time
-                if (currentLocationType != selectedLocationType || currentLocationType != LocationType.Assets)
+                // 如果存储类型发生变化，且转移到了 Assets 下，需要重新解析 upm
+                if (currentLocationType != selectedLocationType && currentLocationType == LocationType.Assets)
                 {
                     Debug.Log($"{nameof(EditorSettingsLayout)}:  needResolve upm!");
                     Client.Resolve();
@@ -247,8 +251,7 @@ namespace zFramework.TinyRPC.Editor
             }
             finally
             {
-                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
-                Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll();
+                AssetDatabase.AllowAutoRefresh();
             }
         }
 
