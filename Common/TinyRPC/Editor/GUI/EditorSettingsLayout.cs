@@ -324,8 +324,12 @@ namespace zFramework.TinyRPC.Editors
                 if (proto.file && proto.enable)
                 {
                     var protoPath = AssetDatabase.GetAssetPath(proto.file);
-                    var protoContent = File.ReadAllText(protoPath);
-                    TinyProtoHandler.Proto2CS(proto.file.name, protoContent, newLocation, settings);
+                    // validate proto file
+                    if (protoPath.EndsWith(".proto"))
+                    {
+                        var protoContent = File.ReadAllText(protoPath);
+                        TinyProtoHandler.Proto2CS(proto.file.name, protoContent, newLocation, settings);
+                    }
                 }
             }
             TryCreatePackageJsonFile(newLocation);
