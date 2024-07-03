@@ -537,28 +537,22 @@ namespace zFramework.TinyRPC.Editors
         }
 
         #region ReorderableList Callbacks
-        Rect footerRect;
         private void OnFooterDrawing(Rect rect)
         {
-            footerRect = rect;
-            // draw add and delete button default way
             ReorderableList.defaultBehaviours.DrawFooter(rect, m_list);
-
         }
 
         private void AskIfDeleteProtoFile(Object file)
         {
             if (file)
             {
-                // draw a popup window to let user confirm delete the proto file or not
-                var alsoDeleteFile = EditorUtility.DisplayDialog("删除提示", "是否同时删除该 proto 文件？", "删除", "取消");
-                if (alsoDeleteFile)
+                var path = AssetDatabase.GetAssetPath(file);
+                var name = Path.GetFileName(path);
+                if (File.Exists(path) && path.EndsWith(".proto"))
                 {
-                    var path = AssetDatabase.GetAssetPath(file);
-                    if (File.Exists(path) && path.EndsWith(".proto"))
+                    var alsoDeleteFile = EditorUtility.DisplayDialog("删除提示", "是否同时删除该 proto 文件？", "删除", "取消");
+                    if (alsoDeleteFile)
                     {
-                        var name = Path.GetFileName(path);
-                        Debug.Log($"{nameof(EditorSettingsLayout)}: user want to delete file ：{path}");
                         try
                         {
                             FileUtil.DeleteFileOrDirectory(path);
@@ -568,7 +562,6 @@ namespace zFramework.TinyRPC.Editors
                         {
                             Debug.LogError($"{nameof(EditorSettingsLayout)}: 删除 {name} 失败，更多 ↓ \n{e.Message}");
                         }
-                        // check opr result
                         var message = $"删除 {name} {(File.Exists(path) ? "失败" : "成功")}!";
                         window.ShowNotification(new GUIContent(message));
                     }
@@ -586,9 +579,6 @@ namespace zFramework.TinyRPC.Editors
             serializedObject.ApplyModifiedProperties();
             if (file != null)
             {
-                var path = AssetDatabase.GetAssetPath(file);
-                var name = Path.GetFileName(path);
-                Debug.Log($"{nameof(EditorSettingsLayout)}:  del callback 一并删除 {name} proto 文件？");
                 AskIfDeleteProtoFile(file);
             }
         }
@@ -612,30 +602,15 @@ namespace zFramework.TinyRPC.Editors
                 var content = "#请在下面撰写网络协议： ";
                 File.WriteAllText(path, content, Encoding.UTF8);
                 AssetDatabase.Refresh();
-                Debug.Log($"{nameof(EditorSettingsLayout)}: relatedpath = {path}");
                 var asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(path);
                 if (asset)
                 {
-                    Debug.Log($"{nameof(EditorSettingsLayout)}: filename = {asset.name}");
                     // 2. 添加到列表中
-                    // log array size
-                    Debug.Log($"{nameof(EditorSettingsLayout)}: before arrary size = {list.count} , {list.serializedProperty.arraySize}");
                     list.serializedProperty.arraySize++;
-                    Debug.Log($"{nameof(EditorSettingsLayout)}:  after arrary size = {list.count} , {list.serializedProperty.arraySize}");
                     var itemData = list.serializedProperty.GetArrayElementAtIndex(list.serializedProperty.arraySize - 1);
                     itemData.FindPropertyRelative("file").objectReferenceValue = asset;
                     itemData.FindPropertyRelative("enable").boolValue = true;
                     serializedObject.ApplyModifiedProperties();
-
-
-
-
-                    //list.serializedProperty.arraySize = list.count + 1;
-                    //list.index = list.count - 1;
-                    //var itemData = list.serializedProperty.GetArrayElementAtIndex(list.index);
-                    //itemData.FindPropertyRelative("file").objectReferenceValue = asset;
-                    //itemData.FindPropertyRelative("enable").boolValue = true;
-                    //serializedObject.ApplyModifiedProperties();
                 }
                 else
                 {
@@ -646,17 +621,10 @@ namespace zFramework.TinyRPC.Editors
 
         private void OnElementCallbackDrawing(Rect rect, int index, bool isActive, bool isFocused)
         {
-            // Use the default way to draw the element
+            // todo: 需要确认为啥会丢失 helpbox 效果
             var element = m_list.serializedProperty.GetArrayElementAtIndex(index);
             rect.y += 2;
-            EditorGUI.PropertyField(rect, element, GUIContent.none);
-            //if (isActive && Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Delete)
-            //{
-            //    var file = element.FindPropertyRelative("file").objectReferenceValue;
-            //    protoProperty.DeleteArrayElementAtIndex(index);
-            //    serializedObject.ApplyModifiedProperties();
-            //    AskIfDeleteProtoFile(file);
-            //}
+            EditorGUI.PropertyField(rect, element);
         }
         private void OnHeaderDrawing(Rect rect)
         {
@@ -664,15 +632,14 @@ namespace zFramework.TinyRPC.Editors
         }
         #endregion
 
-
         #region GUIContents and message
-        GUIContent indentwithtab_content = new("使用 Tab 缩进", "取消勾选使用 4 个空格代表一个 Tab (visual studio)");
-        GUIContent initBt_cnt = new GUIContent("请选择 proto 文件", "请选择用于生成 .cs 实体类的 proto 文件");
-        GUIContent updateBt_cnt = new GUIContent("更新", "选择新的 proto 文件，如果此文件在工程外，将会复制到工程内，覆盖原有的 proto 文件");
-        GUIContent generateBt_cnt = new GUIContent("生成消息实体类", "");
-        GUIContent showFolderBt_cnt = new GUIContent("Show", "Show in Explorer");
-        GUIContent tips = new GUIContent("操作完成，请等待编译...");
-        string notice = @"1. 基于 proto3 语法魔改版，跟谷歌Protobuf没任何关系
+        readonly GUIContent indentwithtab_content = new("使用 Tab 缩进", "取消勾选使用 4 个空格代表一个 Tab (visual studio)");
+        readonly GUIContent initBt_cnt = new GUIContent("请选择 proto 文件", "请选择用于生成 .cs 实体类的 proto 文件");
+        readonly GUIContent updateBt_cnt = new GUIContent("更新", "选择新的 proto 文件，如果此文件在工程外，将会复制到工程内，覆盖原有的 proto 文件");
+        readonly GUIContent generateBt_cnt = new GUIContent("生成消息实体类", "");
+        readonly GUIContent showFolderBt_cnt = new GUIContent("Show", "Show in Explorer");
+        readonly GUIContent tips = new GUIContent("操作完成，请等待编译...");
+        readonly string notice = @"1. 基于 proto3 语法魔改版，跟谷歌Protobuf没任何关系
 2. 支持为生成代码引用 .asmdef 定义的程序集
 3. .proto 文件不能以 “Proto” 命名";
         #endregion
