@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -10,7 +11,7 @@ namespace zFramework.TinyRPC.Editors
     public class PopupInputWindow : EditorWindow
     {
         private string protoName;
-        private bool isDuplicated;
+        private string[] files;
         private Rect rect;
         private readonly TaskCompletionSource<string> tcs;
         static PopupInputWindow instance;
@@ -29,6 +30,7 @@ namespace zFramework.TinyRPC.Editors
                 EditorGUI.LabelField(lastRect, inputContent);
             }
             var isEmpty = string.IsNullOrEmpty(protoName);
+            var isDuplicated = files.Any(f => Path.GetFileNameWithoutExtension(f) == protoName);
             var isExclude = protoName == TinyRpcEditorSettings.ProtoFileContainer;
             if (isExclude)
             {
@@ -60,7 +62,8 @@ namespace zFramework.TinyRPC.Editors
                 instance = CreateInstance<PopupInputWindow>();
                 instance.rect = rect;
                 // calc if it is duplicated
-                instance.isDuplicated = settings.protos.Any(asset => asset.file && asset.file.name == instance.protoName);
+                var dir = settings.GetProtoFileContianerPath();
+                instance.files = System.IO.Directory.GetFiles(dir, "*.proto");
             }
             instance.ShowPopup();
             instance.Focus();
