@@ -30,9 +30,8 @@ namespace zFramework.TinyRPC.Editors
         // 其他行为保持不变
         ReorderableList m_list;
 
-        private const string AsmdefName = "com.zframework.tinyrpc.generated.asmdef";
         private const string TinyRPCRuntimeAssembly = "GUID:c5a44f231aee9ef4895a10427e883834";
-        LocationType selectedLocationType, currentLocationType;
+        LocationType selectedLocationType;
         string newLocation;
         string subLocation = "Common";
         public EditorSettingsLayout(EditorWindow window) => this.window = window;
@@ -43,8 +42,8 @@ namespace zFramework.TinyRPC.Editors
         {
             settings = TinyRpcEditorSettings.Instance;
             serializedObject = new SerializedObject(settings);
-            currentLocationType = selectedLocationType = ResolveLocationType(settings.generatedScriptLocation);
-            if (currentLocationType == LocationType.Project)
+            settings.currentLocationType = selectedLocationType = ResolveLocationType(settings.generatedScriptLocation);
+            if (settings.currentLocationType == LocationType.Project)
             {
                 subLocation = ExtractSubLocation(settings.generatedScriptLocation);
             }
@@ -113,16 +112,16 @@ namespace zFramework.TinyRPC.Editors
             if (string.IsNullOrEmpty(path))
             {
                 path = generatedScriptLocationProperty.stringValue = "Assets/TinyRPC/Generated";
-                currentLocationType = selectedLocationType = LocationType.Assets;
+                settings.currentLocationType = selectedLocationType = LocationType.Assets;
             }
 
-            var packagePath = currentLocationType != LocationType.Assets ? "Packages/com.zframework.tinyrpc.generated" : path;
+            var packagePath = settings.currentLocationType != LocationType.Assets ? "Packages/com.zframework.tinyrpc.generated" : path;
             DefaultAsset packageFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(packagePath);
 
             // 获取 Project Packages 节点下的 TinyRPC Generated 文件夹
             if (packageFolder)
             {
-                if (currentLocationType != LocationType.Assets)
+                if (settings.currentLocationType != LocationType.Assets)
                 {
                     packageFolder.name = "TinyRPC Generated";
                 }
@@ -160,7 +159,7 @@ namespace zFramework.TinyRPC.Editors
                 }
             }
 
-            if (selectedLocationType != currentLocationType)
+            if (selectedLocationType != settings.currentLocationType)
             {
                 // todo : 选择了直接提醒是否转移，是，转移，否，不转移 ，不会是下次生成代码时生效
                 EditorGUILayout.HelpBox("选择了新的消息存储位置，在下次生成代码时生效", UnityEditor.MessageType.Warning);
@@ -256,7 +255,7 @@ namespace zFramework.TinyRPC.Editors
                 CreateNewPackage();
                 //its new one , we should del the previours package
                 // and save new location as well
-                if (selectedLocationType != currentLocationType)
+                if (selectedLocationType != settings.currentLocationType)
                 {
                     await RemovePrevioursPackageEntityAsync();
                 }
@@ -278,7 +277,7 @@ namespace zFramework.TinyRPC.Editors
                     }
                 }
                 // 如果存储类型发生变化，且转移到了 Assets 下，需要重新解析 upm
-                if (currentLocationType != selectedLocationType && currentLocationType == LocationType.Assets)
+                if (settings.currentLocationType != selectedLocationType && settings.currentLocationType == LocationType.Assets)
                 {
                     Debug.Log($"{nameof(EditorSettingsLayout)}:  needResolve upm!");
                     Client.Resolve();
@@ -291,7 +290,7 @@ namespace zFramework.TinyRPC.Editors
                 Debug.LogError($"TinyRPC CodeGen Error :{e} ");
                 //if user move to new place and cause exception try to rollback 
                 // but if user is only update messages, do not rollback
-                if (Directory.Exists(newLocation) && selectedLocationType != currentLocationType)
+                if (Directory.Exists(newLocation) && selectedLocationType != settings.currentLocationType)
                 {
                     FileUtil.DeleteFileOrDirectory(newLocation);
                 }
@@ -305,7 +304,7 @@ namespace zFramework.TinyRPC.Editors
         private void PostProcess()
         {
             // 保存新的文件夹
-            currentLocationType = selectedLocationType;
+            settings.currentLocationType = selectedLocationType;
             var trimpath = newLocation.Replace(Application.dataPath, "");
             settings.generatedScriptLocation = generatedScriptLocationProperty.stringValue = trimpath;
             serializedObject.ApplyModifiedProperties();
@@ -354,7 +353,7 @@ namespace zFramework.TinyRPC.Editors
         private async Task RemovePrevioursPackageEntityAsync()
         {
             var current = settings.generatedScriptLocation;
-            current = currentLocationType == LocationType.Project ? Path.Combine(Application.dataPath, current) : FileUtil.GetPhysicalPath(current);
+            current = settings.currentLocationType == LocationType.Project ? Path.Combine(Application.dataPath, current) : FileUtil.GetPhysicalPath(current);
 
             // todo: 使用 MoveFileOrDirectory 代替删除，如果移动失败，可以提示用户关闭占用文件的程序 后继续
             try
@@ -369,7 +368,7 @@ namespace zFramework.TinyRPC.Editors
                 Debug.LogError($"转移 Generated 文件夹失败，请先关闭可能占用文件的程序后重试 :{e} ");
             }
 
-            if (currentLocationType != LocationType.Assets)
+            if (settings.currentLocationType != LocationType.Assets)
             {
                 var error = await Client.Remove("com.zframework.tinyrpc.generated");
                 if (string.IsNullOrEmpty(error))
@@ -437,7 +436,7 @@ namespace zFramework.TinyRPC.Editors
         /// <param name="root">生成脚本的根节点路径</param>
         private void TryCreateAssemblyDefinitionFile(string path)
         {
-            var file = Path.Combine(path, AsmdefName);
+            var file = Path.Combine(path, TinyRpcEditorSettings.AsmdefName);
             if (!File.Exists(file))
             {
                 var references = settings.assemblies
@@ -468,7 +467,7 @@ namespace zFramework.TinyRPC.Editors
         /// <param name="references">要添加的引用列表</param>
         private void AddAssemblyReference(string path, List<string> references)
         {
-            var file = Path.Combine(path, AsmdefName);
+            var file = Path.Combine(path, TinyRpcEditorSettings.AsmdefName);
             if (File.Exists(file))
             {
                 var asmdef = JsonUtility.FromJson<SimpleAssemblyDefinitionFile>(File.ReadAllText(file));
@@ -492,8 +491,8 @@ namespace zFramework.TinyRPC.Editors
                     var content = JsonUtility.ToJson(asmdef, true);
                     File.WriteAllText(file, content, Encoding.UTF8);
                     // 重新导入 .asmdef 文件
-                    var packagePath = currentLocationType != LocationType.Assets ? "Packages/com.zframework.tinyrpc.generated" : path;
-                    AssetDatabase.ImportAsset($"{packagePath}/{AsmdefName}");
+                    var packagePath = settings.currentLocationType != LocationType.Assets ? "Packages/com.zframework.tinyrpc.generated" : path;
+                    AssetDatabase.ImportAsset($"{packagePath}/{TinyRpcEditorSettings.AsmdefName}");
                 }
             }
         }
@@ -537,12 +536,6 @@ namespace zFramework.TinyRPC.Editors
             return type;
         }
 
-        public enum LocationType
-        {
-            Assets,
-            Project, //Project 同级目录,但是依旧出现在 Packages 模块下
-            Packages // 文件夹直接出现在 Packages 文件夹下
-        }
         #region ReorderableList Callbacks
         Rect footerRect;
         private void OnFooterDrawing(Rect rect)
@@ -562,7 +555,7 @@ namespace zFramework.TinyRPC.Editors
                 if (alsoDeleteFile)
                 {
                     var path = AssetDatabase.GetAssetPath(file);
-                    if (File.Exists(path)&&path.EndsWith(".proto"))
+                    if (File.Exists(path) && path.EndsWith(".proto"))
                     {
                         var name = Path.GetFileName(path);
                         Debug.Log($"{nameof(EditorSettingsLayout)}: user want to delete file ：{path}");
@@ -613,19 +606,14 @@ namespace zFramework.TinyRPC.Editors
             else
             {
                 Debug.Log($"{nameof(EditorSettingsLayout)}: proto name = {protoName}");
+                var path = settings.GetProtoFileContianerPath();
                 //1. 指定路径生成一个 proto 文件
-                var path = Path.Combine(newLocation, $"{TinyRpcEditorSettings.ProtoFileContainer}/{protoName}.proto");
+                path = Path.Combine(path, $"{protoName}.proto");
                 var content = "#请在下面撰写网络协议： ";
                 File.WriteAllText(path, content, Encoding.UTF8);
                 AssetDatabase.Refresh();
-
-                var relatedPath = $"Packages/{AsmdefName[..^7]}/{TinyRpcEditorSettings.ProtoFileContainer}/{protoName}.proto";
-                if (currentLocationType == LocationType.Assets)
-                {
-                    relatedPath = FileUtil.GetProjectRelativePath(path);
-                }
-                Debug.Log($"{nameof(EditorSettingsLayout)}: relatedpath = {relatedPath}");
-                var asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(relatedPath);
+                Debug.Log($"{nameof(EditorSettingsLayout)}: relatedpath = {path}");
+                var asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(path);
                 if (asset)
                 {
                     Debug.Log($"{nameof(EditorSettingsLayout)}: filename = {asset.name}");
