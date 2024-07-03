@@ -51,6 +51,5 @@ namespace zFramework.TinyRPC.Editors
             var path = AssetDatabase.GetAssetPath(file);
             return path.EndsWith(".proto");
         }
-
     }
 }

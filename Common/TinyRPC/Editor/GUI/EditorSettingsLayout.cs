@@ -55,9 +55,9 @@ namespace zFramework.TinyRPC.Editors
             m_list ??= new ReorderableList(serializedObject, protoProperty, true, true, true, true);
             m_list.drawHeaderCallback = OnHeaderDrawing;
             m_list.drawElementCallback = OnElementCallbackDrawing;
-            m_list.drawFooterCallback = OnFooterDrawing;
             m_list.onRemoveCallback = OnRemoveCallback;
             m_list.onAddDropdownCallback = OnAddDropdownCallback;
+            m_list.elementHeightCallback = OnCalcElementHeight;
 
             ResolveLocation();
         }
@@ -537,10 +537,6 @@ namespace zFramework.TinyRPC.Editors
         }
 
         #region ReorderableList Callbacks
-        private void OnFooterDrawing(Rect rect)
-        {
-            ReorderableList.defaultBehaviours.DrawFooter(rect, m_list);
-        }
 
         private void AskIfDeleteProtoFile(Object file)
         {
@@ -589,13 +585,8 @@ namespace zFramework.TinyRPC.Editors
             rect.x += window.position.x - 100;
             rect.y += window.position.y + 40;
             var protoName = await PopupInputWindow.WaitForInputAsync(settings, rect);
-            if (string.IsNullOrEmpty(protoName))
+            if (!string.IsNullOrEmpty(protoName))
             {
-                Debug.Log($"{nameof(EditorSettingsLayout)}: user cancel input proto name");
-            }
-            else
-            {
-                Debug.Log($"{nameof(EditorSettingsLayout)}: proto name = {protoName}");
                 var path = settings.GetProtoFileContianerPath();
                 //1. 指定路径生成一个 proto 文件
                 path = Path.Combine(path, $"{protoName}.proto");
@@ -618,14 +609,18 @@ namespace zFramework.TinyRPC.Editors
                 }
             }
         }
-
         private void OnElementCallbackDrawing(Rect rect, int index, bool isActive, bool isFocused)
         {
-            // todo: 需要确认为啥会丢失 helpbox 效果
             var element = m_list.serializedProperty.GetArrayElementAtIndex(index);
             rect.y += 2;
-            EditorGUI.PropertyField(rect, element);
+            EditorGUI.PropertyField(rect, element, GUIContent.none, true);
         }
+        private float OnCalcElementHeight(int index)
+        {
+            var ele = m_list.serializedProperty.GetArrayElementAtIndex(index);
+            return EditorGUI.GetPropertyHeight(ele, GUIContent.none, true);
+        }
+
         private void OnHeaderDrawing(Rect rect)
         {
             EditorGUI.LabelField(rect, "Proto 文件列表:");
