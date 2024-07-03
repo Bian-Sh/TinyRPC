@@ -24,11 +24,7 @@ namespace zFramework.TinyRPC.Editors
         SerializedProperty indentWithTabProperty;
         SerializedProperty generatedScriptLocationProperty;
         SerializedProperty generateAsPartialClassProperty;
-        // 重绘 ReorderableList Add 功能，实现点击“+”出现弹窗要求用户输入 proto 文件名
-        // 重绘 ReorderableList Remove 功能，实现点击“-”出现确认弹窗：是否删除该 proto 文件
-        // Hook Del 按键删除 item 功能，确保跟点击 “-” 是一样的效果
-        // 其他行为保持不变
-        ReorderableList m_list;
+        PopupAddingList m_list;
 
         private const string TinyRPCRuntimeAssembly = "GUID:c5a44f231aee9ef4895a10427e883834";
         LocationType selectedLocationType;
@@ -52,19 +48,9 @@ namespace zFramework.TinyRPC.Editors
             indentWithTabProperty = serializedObject.FindProperty(nameof(settings.indentWithTab));
             generatedScriptLocationProperty = serializedObject.FindProperty(nameof(settings.generatedScriptLocation));
             generateAsPartialClassProperty = serializedObject.FindProperty(nameof(settings.generateAsPartialClass));
-            m_list ??= new ReorderableList(serializedObject, protoProperty, true, true, true, true);
-            m_list.drawHeaderCallback = OnHeaderDrawing;
-            m_list.drawElementCallback = OnElementCallbackDrawing;
-            m_list.onRemoveCallback = OnRemoveCallback;
-            m_list.onAddDropdownCallback = OnAddDropdownCallback;
-            m_list.elementHeightCallback = OnCalcElementHeight;
 
+            m_list = new PopupAddingList(window, serializedObject, protoProperty);
             ResolveLocation();
-        }
-
-        ~EditorSettingsLayout()
-        {
-            m_list.drawHeaderCallback -= OnHeaderDrawing;
         }
 
         private void ResolveLocation()
@@ -165,7 +151,17 @@ namespace zFramework.TinyRPC.Editors
                 EditorGUILayout.HelpBox("选择了新的消息存储位置，在下次生成代码时生效", UnityEditor.MessageType.Warning);
                 ResolveLocation();
             }
-            m_list.DoLayoutList();
+            // 如果用户修改了 proto 列表，存储之
+            using (var changeScope = new EditorGUI.ChangeCheckScope())
+            {
+                m_list.DoLayoutList();
+                if (changeScope.changed)
+                {
+                    Debug.Log($"{nameof(EditorSettingsLayout)}: list something changed");
+                }
+            }
+
+
             // 如果用户插入或者删除了 .asmdef 文件，需要重新生成 .asmdef 文件
             using (var changeScope = new EditorGUI.ChangeCheckScope())
             {
@@ -536,96 +532,6 @@ namespace zFramework.TinyRPC.Editors
             return type;
         }
 
-        #region ReorderableList Callbacks
-
-        private void AskIfDeleteProtoFile(Object file)
-        {
-            if (file)
-            {
-                var path = AssetDatabase.GetAssetPath(file);
-                var name = Path.GetFileName(path);
-                if (File.Exists(path) && path.EndsWith(".proto"))
-                {
-                    var alsoDeleteFile = EditorUtility.DisplayDialog("删除提示", $"是否同时删除文件: {name}？", "删除", "取消");
-                    if (alsoDeleteFile)
-                    {
-                        try
-                        {
-                            FileUtil.DeleteFileOrDirectory(path);
-                            AssetDatabase.Refresh();
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogError($"{nameof(EditorSettingsLayout)}: 删除 {name} 失败，更多 ↓ \n{e.Message}");
-                        }
-                        var message = $"删除 {name} {(File.Exists(path) ? "失败" : "成功")}!";
-                        window.ShowNotification(new GUIContent(message));
-                    }
-                }
-            }
-        }
-
-        private void OnRemoveCallback(ReorderableList list)
-        {
-            var index = list.index;
-            var element = protoProperty.GetArrayElementAtIndex(index);
-            var file = element.FindPropertyRelative("file").objectReferenceValue;
-
-            protoProperty.DeleteArrayElementAtIndex(list.index);
-            serializedObject.ApplyModifiedProperties();
-            if (file != null)
-            {
-                AskIfDeleteProtoFile(file);
-            }
-        }
-
-        private async void OnAddDropdownCallback(Rect buttonRect, ReorderableList list)
-        {
-            var rect = new Rect(buttonRect.position, buttonRect.size);
-            rect.x += window.position.x - 100;
-            rect.y += window.position.y + 40;
-            var protoName = await PopupInputWindow.WaitForInputAsync(settings, rect);
-            if (!string.IsNullOrEmpty(protoName))
-            {
-                var path = settings.GetProtoFileContianerPath();
-                //1. 指定路径生成一个 proto 文件
-                path = Path.Combine(path, $"{protoName}.proto");
-                var content = "#请在下面撰写网络协议： ";
-                File.WriteAllText(path, content, Encoding.UTF8);
-                AssetDatabase.Refresh();
-                var asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(path);
-                if (asset)
-                {
-                    // 2. 添加到列表中
-                    list.serializedProperty.arraySize++;
-                    var itemData = list.serializedProperty.GetArrayElementAtIndex(list.serializedProperty.arraySize - 1);
-                    itemData.FindPropertyRelative("file").objectReferenceValue = asset;
-                    itemData.FindPropertyRelative("enable").boolValue = true;
-                    serializedObject.ApplyModifiedProperties();
-                }
-                else
-                {
-                    Debug.LogError($"{nameof(EditorSettingsLayout)}: create proto file failed!");
-                }
-            }
-        }
-        private void OnElementCallbackDrawing(Rect rect, int index, bool isActive, bool isFocused)
-        {
-            var element = m_list.serializedProperty.GetArrayElementAtIndex(index);
-            rect.y += 2;
-            EditorGUI.PropertyField(rect, element, GUIContent.none, true);
-        }
-        private float OnCalcElementHeight(int index)
-        {
-            var ele = m_list.serializedProperty.GetArrayElementAtIndex(index);
-            return EditorGUI.GetPropertyHeight(ele, GUIContent.none, true);
-        }
-
-        private void OnHeaderDrawing(Rect rect)
-        {
-            EditorGUI.LabelField(rect, "Proto 文件列表:");
-        }
-        #endregion
 
         #region GUIContents and message
         readonly GUIContent indentwithtab_content = new("使用 Tab 缩进", "取消勾选使用 4 个空格代表一个 Tab (visual studio)");
