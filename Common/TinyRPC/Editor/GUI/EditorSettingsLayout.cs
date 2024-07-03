@@ -550,7 +550,7 @@ namespace zFramework.TinyRPC.Editors
                 var name = Path.GetFileName(path);
                 if (File.Exists(path) && path.EndsWith(".proto"))
                 {
-                    var alsoDeleteFile = EditorUtility.DisplayDialog("删除提示", "是否同时删除该 proto 文件？", "删除", "取消");
+                    var alsoDeleteFile = EditorUtility.DisplayDialog("删除提示", $"是否同时删除文件: {name}？", "删除", "取消");
                     if (alsoDeleteFile)
                     {
                         try
