@@ -10,6 +10,7 @@ namespace zFramework.TinyRPC.Editors
     public static class EditorSettingWatcher
     {
         public static Action OnEditorFocused;
+        public static Action OnEditorLostFocus;
         static bool isFocused;
         static EditorSettingWatcher() => EditorApplication.update += Update;
         static void Update()
@@ -20,6 +21,10 @@ namespace zFramework.TinyRPC.Editors
                 if (isFocused)
                 {
                     OnEditorFocused?.Invoke();
+                }
+                else
+                {
+                    OnEditorLostFocus?.Invoke();
                 }
             }
         }
