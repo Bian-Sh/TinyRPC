@@ -7,7 +7,7 @@ using UnityEngine;
 using zFramework.TinyRPC.Editors;
 using Object = UnityEngine.Object;
 
-public class PopupAddingList 
+public class PopupAddingList
 {
     // 重绘 ReorderableList Add 功能，实现点击“+”出现弹窗要求用户输入 proto 文件名
     // 重绘 ReorderableList Remove 功能，实现点击“-”出现确认弹窗：是否删除该 proto 文件
@@ -19,12 +19,12 @@ public class PopupAddingList
     readonly SerializedObject serializedObject;
     readonly SerializedProperty protoProperty;
 
-    public PopupAddingList(EditorWindow window,SerializedObject so, SerializedProperty property)
+    public PopupAddingList(EditorWindow window, SerializedObject so, SerializedProperty property)
     {
         serializedObject = so;
         protoProperty = property;
         this.window = window;
-        m_list  = new ReorderableList(so, property, true, true, true, true);
+        m_list = new ReorderableList(so, property, true, true, true, true);
         m_list.drawHeaderCallback = OnHeaderDrawing;
         m_list.drawElementCallback = OnElementCallbackDrawing;
         m_list.onRemoveCallback = OnRemoveCallback;
@@ -86,11 +86,17 @@ public class PopupAddingList
 
     private async void OnAddDropdownCallback(Rect buttonRect, ReorderableList list)
     {
+        if (EditorApplication.isCompiling) 
+        {
+            window.ShowNotification(new GUIContent("请等待编译完成！"));
+            return;
+        }
+
         var rect = new Rect(buttonRect.position, buttonRect.size);
         rect.x += window.position.x - 100;
         rect.y += window.position.y + 40;
         var settings = TinyRpcEditorSettings.Instance;
-        var protoName = await PopupInputWindow.WaitForInputAsync(settings, rect);
+        var protoName =await PopupInputWindow.WaitForInputAsync(settings, rect);
         if (!string.IsNullOrEmpty(protoName))
         {
             var path = settings.GetProtoFileContianerPath();
@@ -107,12 +113,12 @@ public class PopupAddingList
                 var itemData = list.serializedProperty.GetArrayElementAtIndex(list.serializedProperty.arraySize - 1);
                 itemData.FindPropertyRelative("file").objectReferenceValue = asset;
                 itemData.FindPropertyRelative("enable").boolValue = true;
+                list.onChangedCallback?.Invoke(list);
             }
             else
             {
                 Debug.LogError($"{nameof(EditorSettingsLayout)}: create proto file failed!");
             }
-            serializedObject.ApplyModifiedProperties();
         }
     }
     private void OnElementCallbackDrawing(Rect rect, int index, bool isActive, bool isFocused)

@@ -67,6 +67,7 @@ namespace zFramework.TinyRPC.Editors
             }
             instance.ShowPopup();
             instance.Focus();
+
             return instance.tcs.Task;
         }
         // 当 PopupInputWindow 丢失焦点，窗口关闭
