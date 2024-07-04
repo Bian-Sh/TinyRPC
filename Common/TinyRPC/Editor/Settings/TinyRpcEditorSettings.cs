@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -41,6 +42,11 @@ namespace zFramework.TinyRPC.Editors
             else
             {
                 path = $"Packages/{AsmdefName[..^7]}/{ProtoFileContainer}";
+            }
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+                AssetDatabase.Refresh();
             }
             return path;
         }
