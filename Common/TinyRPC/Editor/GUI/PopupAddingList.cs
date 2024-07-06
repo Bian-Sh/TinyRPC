@@ -73,11 +73,8 @@ public class PopupAddingList
 
     private void OnRemoveCallback(ReorderableList list)
     {
-        var index = list.index;
-        var element = protoProperty.GetArrayElementAtIndex(index);
-        var file = element.FindPropertyRelative("file").objectReferenceValue;
-
-        protoProperty.DeleteArrayElementAtIndex(list.index);
+        var file = list.serializedProperty.GetArrayElementAtIndex(list.index).FindPropertyRelative("file").objectReferenceValue;
+        ReorderableList.defaultBehaviours.DoRemoveButton(list);
         if (file != null)
         {
             AskIfDeleteProtoFile(file);
@@ -86,17 +83,17 @@ public class PopupAddingList
 
     private async void OnAddDropdownCallback(Rect buttonRect, ReorderableList list)
     {
-        if (EditorApplication.isCompiling) 
+        if (EditorApplication.isCompiling)
         {
             window.ShowNotification(new GUIContent("请等待编译完成！"));
             return;
         }
 
         var rect = new Rect(buttonRect.position, buttonRect.size);
-        rect.x += window.position.x - 100;
+        rect.x += window.position.x - 60;
         rect.y += window.position.y + 40;
         var settings = TinyRpcEditorSettings.Instance;
-        var protoName =await PopupInputWindow.WaitForInputAsync(settings, rect);
+        var protoName = await PopupInputWindow.WaitForInputAsync(settings, rect);
         if (!string.IsNullOrEmpty(protoName))
         {
             var path = settings.GetProtoFileContianerPath();
