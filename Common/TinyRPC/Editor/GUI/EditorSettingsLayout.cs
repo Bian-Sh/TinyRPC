@@ -151,16 +151,8 @@ namespace zFramework.TinyRPC.Editors
                 EditorGUILayout.HelpBox("选择了新的消息存储位置，在下次生成代码时生效", UnityEditor.MessageType.Warning);
                 ResolveLocation();
             }
-            // 如果用户修改了 proto 列表，存储之
-            using (var changeScope = new EditorGUI.ChangeCheckScope())
-            {
-                m_list.DoLayoutList();
-                if (changeScope.changed)
-                {
-                    Debug.Log($"{nameof(EditorSettingsLayout)}: list something changed");
-                }
-            }
 
+            m_list.DoLayoutList();
 
             // 如果用户插入或者删除了 .asmdef 文件，需要重新生成 .asmdef 文件
             using (var changeScope = new EditorGUI.ChangeCheckScope())

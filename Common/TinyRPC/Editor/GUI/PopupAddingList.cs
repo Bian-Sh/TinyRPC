@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEditorInternal;
@@ -11,30 +13,25 @@ public class PopupAddingList
 {
     // 重绘 ReorderableList Add 功能，实现点击“+”出现弹窗要求用户输入 proto 文件名
     // 重绘 ReorderableList Remove 功能，实现点击“-”出现确认弹窗：是否删除该 proto 文件
-    // Hook Del 按键删除 item 功能，确保跟点击 “-” 是一样的效果
-    // 其他行为保持不变
-    // todo: 拖入 proto 文件需要被自动添加到列表中
+    // 拖入 proto 文件需要被自动添加到列表中
     readonly ReorderableList m_list;
     readonly EditorWindow window;
     readonly SerializedObject serializedObject;
     readonly SerializedProperty protoProperty;
-
     public PopupAddingList(EditorWindow window, SerializedObject so, SerializedProperty property)
     {
         serializedObject = so;
         protoProperty = property;
         this.window = window;
-        m_list = new ReorderableList(so, property, true, true, true, true);
-        m_list.drawHeaderCallback = OnHeaderDrawing;
-        m_list.drawElementCallback = OnElementCallbackDrawing;
-        m_list.onRemoveCallback = OnRemoveCallback;
-        m_list.onAddDropdownCallback = OnAddDropdownCallback;
-        m_list.elementHeightCallback = OnCalcElementHeight;
-        m_list.onChangedCallback += list =>
+        m_list = new ReorderableList(so, property, true, true, true, true)
         {
-            Debug.Log($"{nameof(PopupAddingList)}: change...");
-            serializedObject.ApplyModifiedProperties();
+            drawHeaderCallback = OnHeaderDrawing,
+            drawElementCallback = OnElementCallbackDrawing,
+            onRemoveCallback = OnRemoveCallback,
+            onAddDropdownCallback = OnAddDropdownCallback,
+            elementHeightCallback = OnCalcElementHeight
         };
+        m_list.onChangedCallback += list => serializedObject.ApplyModifiedProperties();
     }
 
     public void DoLayoutList()
@@ -43,7 +40,6 @@ public class PopupAddingList
     }
 
     #region ReorderableList Callbacks
-
     private void AskIfDeleteProtoFile(Object file)
     {
         if (file)
@@ -127,12 +123,69 @@ public class PopupAddingList
     private float OnCalcElementHeight(int index)
     {
         var ele = m_list.serializedProperty.GetArrayElementAtIndex(index);
-        return EditorGUI.GetPropertyHeight(ele, GUIContent.none, true);
+        var height = EditorGUI.GetPropertyHeight(ele, GUIContent.none, true);
+        height += 2;
+        return height;
     }
 
     private void OnHeaderDrawing(Rect rect)
     {
         EditorGUI.LabelField(rect, "Proto 文件列表:");
+        // 处理将 proto 文件拖入列表 Header 中的情况
+        var evt = Event.current;
+        if (evt.type == EventType.DragUpdated || evt.type == EventType.DragPerform)
+        {
+            if (rect.Contains(evt.mousePosition))
+            {
+                var reject = DragAndDrop.objectReferences.Any(obj =>
+                {
+                    if (obj is DefaultAsset asset)
+                    {
+                        var path = AssetDatabase.GetAssetPath(asset);
+                        return !path.EndsWith(".proto");
+                    }
+                    return true; // other case should be rejected
+                });
+                if (reject)
+                {
+                    DragAndDrop.visualMode = DragAndDropVisualMode.Rejected;
+                }
+                else
+                {
+                    DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+                    if (evt.type == EventType.DragPerform)
+                    {
+                        var assets = new List<DefaultAsset>();
+                        for (int i = 0; i < m_list.count; i++)
+                        {
+                            var item = m_list.serializedProperty.GetArrayElementAtIndex(i).FindPropertyRelative("file").objectReferenceValue;
+                            if (item is DefaultAsset proto)
+                            {
+                                assets.Add(proto);
+                            }
+                        }
+                        DragAndDrop.AcceptDrag();
+                        foreach (var obj in DragAndDrop.objectReferences)
+                        {
+                            if (obj is DefaultAsset asset)
+                            {
+                                if (assets.Contains(asset))
+                                {
+                                    continue;
+                                }
+                                protoProperty.arraySize++;
+                                var itemData = protoProperty.GetArrayElementAtIndex(protoProperty.arraySize - 1);
+                                itemData.FindPropertyRelative("file").objectReferenceValue = asset;
+                                itemData.FindPropertyRelative("enable").boolValue = true;
+                                m_list.onChangedCallback?.Invoke(m_list);
+                            }
+                        }
+                        assets.Clear();
+                    }
+                }
+                evt.Use();
+            }
+        }
     }
     #endregion
 }
