@@ -20,8 +20,10 @@ namespace zFramework.TinyRPC.Editors
 
         public void OnGUI()
         {
+            // 绘制一个 Rect 作为背景，填充整个窗口
             rect.width = 160;
             rect.height = 48;
+            EditorGUI.DrawRect(new Rect(0, 0, rect.width, rect.height+38), new Color32(70, 96, 124, 255));
             GUILayout.Space(5);
             protoName = EditorGUILayout.TextField("", protoName);
             var lastRect = GUILayoutUtility.GetLastRect();
@@ -54,7 +56,6 @@ namespace zFramework.TinyRPC.Editors
             this.position = rect;
             this.minSize = new Vector2(160, rect.height);
         }
-
         public static Task<string> WaitForInputAsync(TinyRpcEditorSettings settings, Rect rect)
         {
             if (!instance)
@@ -63,11 +64,10 @@ namespace zFramework.TinyRPC.Editors
                 instance.rect = rect;
                 // calc if it is duplicated
                 var dir = settings.GetProtoFileContianerPath();
-                instance.files = System.IO.Directory.GetFiles(dir, "*.proto");
+                instance.files = Directory.GetFiles(dir, "*.proto");
             }
             instance.ShowPopup();
             instance.Focus();
-
             return instance.tcs.Task;
         }
         // 当 PopupInputWindow 丢失焦点，窗口关闭
