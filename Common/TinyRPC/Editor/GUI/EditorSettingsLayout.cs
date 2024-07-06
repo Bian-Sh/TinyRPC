@@ -101,7 +101,7 @@ namespace zFramework.TinyRPC.Editors
                 settings.currentLocationType = selectedLocationType = LocationType.Assets;
             }
 
-            var packagePath = settings.currentLocationType != LocationType.Assets ? "Packages/com.zframework.tinyrpc.generated" : path;
+            var packagePath = settings.currentLocationType != LocationType.Assets ? $"Packages/{TinyRpcEditorSettings.AsmdefName[..^7]}" : path;
             DefaultAsset packageFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(packagePath);
 
             // 获取 Project Packages 节点下的 TinyRPC Generated 文件夹
@@ -358,7 +358,7 @@ namespace zFramework.TinyRPC.Editors
 
             if (settings.currentLocationType != LocationType.Assets)
             {
-                var error = await Client.Remove("com.zframework.tinyrpc.generated");
+                var error = await Client.Remove(TinyRpcEditorSettings.AsmdefName[..^7]);
                 if (string.IsNullOrEmpty(error))
                 {
                     Debug.Log($"{nameof(EditorSettingsLayout)}: remove upm package success!");
@@ -434,7 +434,7 @@ namespace zFramework.TinyRPC.Editors
 
                 var asmdef = new SimpleAssemblyDefinitionFile
                 {
-                    name = "com.zframework.tinyrpc.generated",
+                    name = TinyRpcEditorSettings.AsmdefName[..^7],
                     autoReferenced = true,
                     references = new List<string>
                     {
@@ -479,7 +479,7 @@ namespace zFramework.TinyRPC.Editors
                     var content = JsonUtility.ToJson(asmdef, true);
                     File.WriteAllText(file, content, Encoding.UTF8);
                     // 重新导入 .asmdef 文件
-                    var packagePath = settings.currentLocationType != LocationType.Assets ? "Packages/com.zframework.tinyrpc.generated" : path;
+                    var packagePath = settings.currentLocationType != LocationType.Assets ? $"Packages/{TinyRpcEditorSettings.AsmdefName[..^7]}" : path;
                     AssetDatabase.ImportAsset($"{packagePath}/{TinyRpcEditorSettings.AsmdefName}");
                 }
             }
