@@ -127,9 +127,21 @@ namespace zFramework.TinyRPC.Editors
                 EditorGUILayout.HelpBox("未找到消息存储文件夹，请生成！", UnityEditor.MessageType.Error);
             }
 
-            // draw loaction type as enum popup
-            selectedLocationType = (LocationType)EditorGUILayout.EnumPopup("消息存储位置：", selectedLocationType);
-
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                // draw loaction type as enum popup
+                selectedLocationType = (LocationType)EditorGUILayout.EnumPopup("消息存储位置：", selectedLocationType);
+                // 绘制一个圆形的问号，鼠标划入会展示 location 类型的意义
+                location_content.image = EditorGUIUtility.IconContent("_Help").image;
+                // 创建一个新的GUIStyle，并手动设置其属性
+                GUIStyle buttonStyle = new(EditorStyles.iconButton)
+                {
+                    imagePosition = ImagePosition.ImageOnly,
+                    margin = new RectOffset(2, 3, 3, 2)
+                };
+                // 使用新的GUIStyle绘制按钮
+                GUILayout.Button(location_content, buttonStyle);
+            }
             // 如果 newlocationtype 是 Project, 需要绘制 Delay Input field 提供用户指定子路径
             // 用户输入的子路径需要校验，剔除 ../ 和 ./ 以及空格，不允许通过组合 ../ 和 ./ 来跳出工程目录
 
@@ -144,6 +156,7 @@ namespace zFramework.TinyRPC.Editors
                     EditorGUILayout.HelpBox(error, UnityEditor.MessageType.Error);
                 }
             }
+            GUILayout.Space(10);
 
             if (selectedLocationType != settings.currentLocationType)
             {
@@ -369,54 +382,6 @@ namespace zFramework.TinyRPC.Editors
                 }
             }
         }
-        private string ValidateSubLocation(string subLocation)
-        {
-            // 检查是否包含 ../, ./, 或 //
-            if (subLocation.Contains("../") || subLocation.Contains("./") || subLocation.Contains("//"))
-            {
-                return "不允许使用 ../ 或 ./ 或 // 跳出此工程所在目录！";
-            }
-
-            // 检查是否包含非法字符
-            var invalidChars = new char[] { '<', '>', '*', ':', '?', '|' };
-            foreach (var c in invalidChars)
-            {
-                if (subLocation.Contains(c))
-                {
-                    return $"路径中包含非法字符：{c}";
-                }
-            }
-            // 如果没有问题，返回 null
-            return null;
-        }
-        public string ExtractSubLocation(string path)
-        {
-            // 确保路径以 TinyRPC Generated 结尾
-            if (!path.EndsWith("TinyRPC Generated"))
-            {
-                return "路径必须以 'TinyRPC Generated' 结尾";
-            }
-
-            // 移除路径的 TinyRPC Generated 部分
-            var trimmedPath = path.Substring(0, path.Length - "TinyRPC Generated".Length);
-
-            // 使用 Split 方法分割路径
-            var pathParts = trimmedPath.Split(new[] { "../../" }, StringSplitOptions.None);
-
-            // 如果路径部分少于2，返回错误
-            if (pathParts.Length < 2)
-            {
-                return "路径中必须包含 '../../'";
-            }
-
-            // 提取最后一个 ../../ 之后的子位置
-            var subLocation = pathParts[pathParts.Length - 1];
-
-            // 移除子位置前后的所有斜杠
-            subLocation = subLocation.Trim('/');
-
-            return subLocation;
-        }
 
         /// <summary>
         /// 为降低反射遍历消息的次数、减小编译时长，故使用 AssemblyDefinition 
@@ -523,7 +488,55 @@ namespace zFramework.TinyRPC.Editors
             };
             return type;
         }
+        public string ExtractSubLocation(string path)
+        {
+            // 确保路径以 TinyRPC Generated 结尾
+            if (!path.EndsWith("TinyRPC Generated"))
+            {
+                throw new Exception("路径必须以 'TinyRPC Generated' 结尾");
+            }
 
+            // 移除路径的 TinyRPC Generated 部分
+            var trimmedPath = path.Substring(0, path.Length - "TinyRPC Generated".Length);
+
+            // 使用 Split 方法分割路径
+            var pathParts = trimmedPath.Split(new[] { "../../" }, StringSplitOptions.None);
+
+            // 如果路径部分少于2，返回错误
+            // 两次回退才能够从 Packages 文件夹中回退到与 Project 同级文件夹
+            if (pathParts.Length < 2)
+            {
+                throw new Exception("路径中必须包含 '../../'");
+            }
+
+            // 提取最后一个 ../../ 之后的子位置
+            var subLocation = pathParts[^1];
+
+            // 移除子位置前后的所有斜杠
+            subLocation = subLocation.Trim('/');
+
+            return subLocation;
+        }
+        private string ValidateSubLocation(string subLocation)
+        {
+            // 检查是否包含 ../, ./, 或 //
+            if (subLocation.Contains("../") || subLocation.Contains("./") || subLocation.Contains("//"))
+            {
+                return "不允许使用 ../ 或 ./ 或 // 跳出此工程所在目录！";
+            }
+
+            // 检查是否包含非法字符
+            var invalidChars = new char[] { '<', '>', '*', ':', '?', '|' };
+            foreach (var c in invalidChars)
+            {
+                if (subLocation.Contains(c))
+                {
+                    return $"路径中包含非法字符：{c}";
+                }
+            }
+            // 如果没有问题，返回 null
+            return null;
+        }
 
         #region GUIContents and message
         readonly GUIContent indentwithtab_content = new("使用 Tab 缩进", "取消勾选使用 4 个空格代表一个 Tab (visual studio)");
@@ -535,6 +548,11 @@ namespace zFramework.TinyRPC.Editors
         readonly string notice = @"1. 基于 proto3 语法魔改版，跟谷歌Protobuf没任何关系
 2. 支持为生成代码引用 .asmdef 定义的程序集
 3. .proto 文件不能以 “Proto” 命名";
+        readonly GUIContent location_content = new GUIContent("", @"脚本生成位置选择：
+1. 不支持 UPM 的编辑器请选择 Assets 
+2. 在支持 UPM 的编辑器请选择 Packages
+3. 与其他工程共用生成的代码请选择 Project 
+");
         #endregion
     }
 }
