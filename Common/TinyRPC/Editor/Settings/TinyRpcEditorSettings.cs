@@ -19,6 +19,7 @@ namespace zFramework.TinyRPC.Editors
         ///  .proto 文件列表
         /// </summary>
         public List<ProtoAsset> protos;
+        public LocationType currentLocationType = LocationType.Packages;
         public string generatedScriptLocation = "Packages/TinyRPC Generated";
         public bool indentWithTab;
         //消息存 Project 同级目录时允许新增父节点
@@ -29,7 +30,6 @@ namespace zFramework.TinyRPC.Editors
         public List<AssemblyDefinitionAsset> assemblies;
         [Tooltip("将该列表中出现的 Common 消息生成 partial class 类型而不是默认的 struct 类型, 如果出现 \"*\" 则全部生成 partial class 类型...")]
         public List<string> generateAsPartialClass;
-        public LocationType currentLocationType;
 
         public string GetProtoFileContianerPath()
         {
