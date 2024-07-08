@@ -34,7 +34,7 @@ namespace zFramework.TinyRPC.Editors
         {
             settings = TinyRpcEditorSettings.Instance;
             serializedObject = new SerializedObject(settings);
-            selectedLocationType = settings.currentLocationType= ResolveLocationType(settings.generatedScriptLocation);
+            selectedLocationType = settings.currentLocationType = ResolveLocationType(settings.generatedScriptLocation);
             if (settings.currentLocationType == LocationType.Project)
             {
                 selectedSubLocation = resolvedSubLocation = ExtractSubLocation(settings.generatedScriptLocation);
@@ -139,7 +139,7 @@ namespace zFramework.TinyRPC.Editors
                 else if (selectedSubLocation != resolvedSubLocation)
                 {
                     //先弹窗提示是否转移，是，转移，否，不转移，同时提示文件占用问题
-                    var result = EditorUtility.DisplayDialog("提示", $"生成脚本从 {resolvedSubLocation} 改变到 {selectedSubLocation}，请确保文件未被占用，是否继续？", "是", "否");
+                    var result = EditorUtility.DisplayDialog("提示", $"生成脚本从 {resolvedSubLocation} 改变到 {selectedSubLocation}，请务必关闭 IDE 避免文件占用，是否继续？", "是", "否");
                     if (result)
                     {
                         MoveGeneratedLocation();
@@ -306,11 +306,9 @@ namespace zFramework.TinyRPC.Editors
             switch (selectedLocationType)
             {
                 case LocationType.Assets:
-                    AssetDatabase.ImportAsset("Assets/TinyRPC/Generated", ImportAssetOptions.ImportRecursive);
-                    // 如果存储类型发生变化，且转移到了 Assets 下，需要重新解析 upm
                     if (settings.currentLocationType != LocationType.Assets)
                     {
-                        Client.Resolve();
+                        Client.Remove(TinyRpcEditorSettings.AsmdefName[..^7]);
                     }
                     break;
                 case LocationType.Project:
