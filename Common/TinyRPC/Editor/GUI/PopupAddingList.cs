@@ -152,7 +152,7 @@ public class PopupAddingList
                 }
                 else
                 {
-                    DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+                    DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
                     if (evt.type == EventType.DragPerform)
                     {
                         var assets = new List<DefaultAsset>();
