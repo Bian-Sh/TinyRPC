@@ -93,6 +93,10 @@ public class PopupAddingList
         if (!string.IsNullOrEmpty(protoName))
         {
             var path = settings.GetProtoFileContianerPath();
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
             //1. 指定路径生成一个 proto 文件
             path = Path.Combine(path, $"{protoName}.proto");
             var content = "#请在下面撰写网络协议： ";

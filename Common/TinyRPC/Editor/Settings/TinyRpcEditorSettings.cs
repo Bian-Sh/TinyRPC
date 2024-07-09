@@ -43,11 +43,6 @@ namespace zFramework.TinyRPC.Editors
             {
                 path = $"Packages/{AsmdefName[..^7]}/{ProtoFileContainer}";
             }
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-                AssetDatabase.Refresh();
-            }
             return path;
         }
     }

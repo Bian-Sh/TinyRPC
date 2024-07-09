@@ -23,7 +23,7 @@ namespace zFramework.TinyRPC.Editors
             // 绘制一个 Rect 作为背景，填充整个窗口
             rect.width = 160;
             rect.height = 48;
-            EditorGUI.DrawRect(new Rect(0, 0, rect.width, rect.height+38), new Color32(70, 96, 124, 255));
+            EditorGUI.DrawRect(new Rect(0, 0, rect.width, rect.height + 38), new Color32(70, 96, 124, 255));
             GUILayout.Space(5);
             protoName = EditorGUILayout.TextField("", protoName);
             var lastRect = GUILayoutUtility.GetLastRect();
@@ -64,7 +64,14 @@ namespace zFramework.TinyRPC.Editors
                 instance.rect = rect;
                 // calc if it is duplicated
                 var dir = settings.GetProtoFileContianerPath();
-                instance.files = Directory.GetFiles(dir, "*.proto");
+                if (!Directory.Exists(dir))
+                {
+                    instance.files = new string[0];
+                }
+                else
+                {
+                    instance.files = Directory.GetFiles(dir, "*.proto");
+                }
             }
             instance.ShowPopup();
             instance.Focus();
