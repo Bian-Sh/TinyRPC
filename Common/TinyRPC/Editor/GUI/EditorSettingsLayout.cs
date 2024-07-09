@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
@@ -100,7 +101,7 @@ namespace zFramework.TinyRPC.Editors
                 if (selectedLocationType != settings.currentLocationType)
                 {
                     // todo : 选择了直接提醒是否转移，是，转移，否，不转移 ，不会是下次生成代码时生效
-                    var result = EditorUtility.DisplayDialog("提示", $"生成脚本从 {settings.currentLocationType} 改变到 {selectedLocationType}，请确保文件未被占用，是否继续？", "是", "否");
+                    var result = EditorUtility.DisplayDialog("提示", $"生成脚本从 {settings.currentLocationType} 改变到 {selectedLocationType}，请务必关闭 IDE 避免文件占用，是否继续？", "是", "否");
                     if (result)
                     {
                         MoveGeneratedLocation();
@@ -183,11 +184,10 @@ namespace zFramework.TinyRPC.Editors
             DrawEditorHelpbox();
         }
 
-        private void MoveGeneratedLocation()
+        private async void MoveGeneratedLocation()
         {
             try
             {
-                // 不允许刷新资产
                 AssetDatabase.DisallowAutoRefresh();
                 var current = ResolvePhysicLocation(settings.currentLocationType, resolvedSubLocation);
                 var dest = ResolvePhysicLocation(selectedLocationType, selectedSubLocation);
@@ -201,11 +201,10 @@ namespace zFramework.TinyRPC.Editors
                     Directory.Delete(dest, true);
                 }
                 FileUtil.MoveFileOrDirectory(current, dest);
-                // 如果 current.parent 下没有内容，删除之
-                if (Directory.GetDirectories(Path.GetDirectoryName(current)).Length == 0)
-                {
-                    Directory.Delete(Path.GetDirectoryName(current), true);
-                }
+
+                // 刷新 package 文件系统
+                await RefreshPackageFileSystemAsync();
+
                 // 文件转移后处理
                 PostProcess(dest);
             }
@@ -219,6 +218,7 @@ namespace zFramework.TinyRPC.Editors
             finally
             {
                 AssetDatabase.AllowAutoRefresh();
+                AssetDatabase.Refresh();
             }
         }
 
@@ -282,7 +282,6 @@ namespace zFramework.TinyRPC.Editors
         {
             try
             {
-                // 不允许刷新资产
                 AssetDatabase.DisallowAutoRefresh();
                 var location = ResolvePhysicLocation(selectedLocationType, selectedSubLocation);
                 CreateNewPackage(location);
@@ -297,28 +296,12 @@ namespace zFramework.TinyRPC.Editors
             finally
             {
                 AssetDatabase.AllowAutoRefresh();
+                AssetDatabase.Refresh();
             }
         }
 
         private void PostProcess(string dest)
         {
-            // 导入此文件夹
-            switch (selectedLocationType)
-            {
-                case LocationType.Assets:
-                    if (settings.currentLocationType != LocationType.Assets)
-                    {
-                        Client.Remove(TinyRpcEditorSettings.AsmdefName[..^7]);
-                    }
-                    break;
-                case LocationType.Project:
-                    Client.Add($"file:../../{selectedSubLocation}/TinyRPC Generated");
-                    break;
-                case LocationType.Packages:
-                    Client.Add("file:Packages/TinyRPC Generated");
-                    break;
-            }
-
             // 保存新的配置
             settings.currentLocationType = selectedLocationType;
             resolvedSubLocation = selectedSubLocation;
@@ -327,6 +310,33 @@ namespace zFramework.TinyRPC.Editors
             serializedObject.ApplyModifiedProperties();
             TinyRpcEditorSettings.Save();
         }
+        private async Task RefreshPackageFileSystemAsync()
+        {
+            // 移除 manifest.json 文件中带 “” 的行 com.zframework.tinyrpc.generated
+            var packagePath = $"Packages/manifest.json";
+            var manifest = File.ReadAllLines(packagePath);
+            var newLines = manifest.Where(v => !v.Contains("com.zframework.tinyrpc.generated")).ToArray();
+            File.WriteAllLines(packagePath, newLines);
+
+            // 导入此文件夹
+            switch (selectedLocationType)
+            {
+                case LocationType.Assets:
+                    break;
+                case LocationType.Project:
+                    settings.currentLocationType = LocationType.Project;
+                    resolvedSubLocation = selectedSubLocation;
+                    await Client.Add($"file:../../{selectedSubLocation}/TinyRPC Generated");
+                    break;
+                case LocationType.Packages:
+                    settings.currentLocationType = LocationType.Packages;
+                    await Client.Add("file:Packages/TinyRPC Generated");
+                    break;
+            }
+            Client.Resolve();
+        }
+
+
         private void CreateNewPackage(string location)
         {
             if (settings.protos.Count(p => p != null) == 0)
