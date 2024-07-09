@@ -3,7 +3,7 @@ using System.Text;
 using System;
 using UnityEngine;
 using System.Linq;
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     /*
      该脚本实现了对传入 proto line 进行处理
@@ -30,6 +30,8 @@ namespace zFramework.TinyRPC.Editor
         string parentClass;
         string msgName;
         string protoName; // for debug only currently，do not reset it in "Reset" function
+        readonly TinyRpcEditorSettings settings;
+        readonly bool shouldGeneratePartialClassAll;
 
         readonly StringBuilder sb;
         readonly List<string> summarys = new();
@@ -50,10 +52,12 @@ namespace zFramework.TinyRPC.Editor
             nameof(LayerMask),
         };
 
-        public ProtoContentProcessor(string protoName)
+        public ProtoContentProcessor(string protoName, TinyRpcEditorSettings settings)
         {
+            this.settings = settings;
             this.protoName = protoName;
             sb = new StringBuilder();
+            shouldGeneratePartialClassAll = settings.generateAsPartialClass.Contains("*");
         }
 
         //1. handle SerializableAttribute, call inside procerssor 
@@ -148,7 +152,14 @@ namespace zFramework.TinyRPC.Editor
             }
             else if (string.IsNullOrEmpty(parentClass))
             {
-                sb.Append($"\tpublic struct {msgName}");
+                if (shouldGeneratePartialClassAll || settings.generateAsPartialClass.Contains(msgName))
+                {
+                    sb.Append($"\tpublic partial class {msgName}");
+                }
+                else
+                {
+                    sb.Append($"\tpublic struct {msgName}");
+                }
             }
             else
             {
@@ -361,11 +372,16 @@ namespace zFramework.TinyRPC.Editor
         {
             var lines = block.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             //checkout message neme first for log 
-            msgName = lines.Where(line=>line.Trim().StartsWith("message")).FirstOrDefault().Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)[1];
+            msgName = lines.Where(line => line.Trim().StartsWith("message")).FirstOrDefault().Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)[1];
 
             for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i].Trim();
+                // skip line start with "#" , it's  region comment
+                if (line.StartsWith("#"))
+                {
+                    continue;
+                }
                 //use keyword "message" instead of "{" for checking whether inside message or not
                 if (string.IsNullOrEmpty(line) || line == "{")
                 {

@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     public class ScriptableSingleton<T> : ScriptableObject where T : ScriptableObject
     {
@@ -13,20 +13,27 @@ namespace zFramework.TinyRPC.Editor
         {
             get
             {
-                if (!s_Instance)
-                {
-                    LoadOrCreate();
-                }
+                TryLoadOrCreate();
                 return s_Instance;
             }
         }
-        public static T LoadOrCreate()
+
+        /// <summary>
+        ///  尝试加载或创建单例
+        /// </summary>
+        /// <param name="forceReload"> 是否强制加载，当且仅当编辑器重新获得焦点时，用于同步外部对配置文件的修改 </param>
+        /// <returns></returns>
+        public static T TryLoadOrCreate(bool forceReload = false)
         {
             string filePath = GetFilePath();
             if (!string.IsNullOrEmpty(filePath))
             {
-                var arr = InternalEditorUtility.LoadSerializedFileAndForget(filePath);
-                s_Instance = arr.Length > 0 ? arr[0] as T : s_Instance ?? CreateInstance<T>();
+                // 为避免尚未落盘数据丢失，当且仅当实例丢失时才加载
+                if (forceReload || !s_Instance)
+                {
+                    var arr = InternalEditorUtility.LoadSerializedFileAndForget(filePath);
+                    s_Instance = arr.Length > 0 ? arr[0] as T : s_Instance ?? CreateInstance<T>();
+                }
             }
             else
             {

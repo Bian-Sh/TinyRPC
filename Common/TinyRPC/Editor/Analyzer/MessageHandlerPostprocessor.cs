@@ -15,7 +15,7 @@ using zFramework.TinyRPC.Settings;
  * 4. 如果类型中存在 MessageHandlerAttribute,则该类型必须被冠以 MessageHandlerProviderAttribute
  */
 
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     /// <summary>
     /// 消息处理器后处理器,用于自动检测程序集是否包含 MessageHandler

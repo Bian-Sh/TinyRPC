@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   protos:
   - {fileID: 102900000, guid: 3762a0735ef55eb43a7a8a251322eb18, type: 3}
-  - {fileID: 102900000, guid: bffe1460fc42c8d45a79af7b643d7c93, type: 3}
+  - {fileID: 102900000, guid: be0cf2499a8835c4498683a7fb50f5f0, type: 3}
   generatedScriptLocation: /../../Common/TinyRPC Generated
   indentWithTab: 0
+  assemblies: []

@@ -1,7 +1,7 @@
 using System;
 using UnityEditor;
 using UnityEditorInternal;
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     /// <summary>
     /// 监听编辑器状态，当编辑器重新 focus 时，重新加载实例，避免某些情景下 svn 、git 等外部修改了数据却无法同步的异常。
@@ -10,6 +10,7 @@ namespace zFramework.TinyRPC.Editor
     public static class EditorSettingWatcher
     {
         public static Action OnEditorFocused;
+        public static Action OnEditorLostFocus;
         static bool isFocused;
         static EditorSettingWatcher() => EditorApplication.update += Update;
         static void Update()
@@ -20,6 +21,10 @@ namespace zFramework.TinyRPC.Editor
                 if (isFocused)
                 {
                     OnEditorFocused?.Invoke();
+                }
+                else
+                {
+                    OnEditorLostFocus?.Invoke();
                 }
             }
         }

@@ -11,7 +11,7 @@ using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 // Runtime Tab, Assembly 列表存 string 但展示 AssemblyDefinitionFile ，方便 Ping
 // Runtime Tab ,Log Filter 高级下拉窗口选择要过滤的消息
 
-namespace zFramework.TinyRPC.Editor
+namespace zFramework.TinyRPC.Editors
 {
     public class TinyRpcEditorWindow : EditorWindow
     {
@@ -57,13 +57,28 @@ namespace zFramework.TinyRPC.Editor
             // init Editor Settings
             toolbarContents = new GUIContent[] { BT_LT, BT_RT };
             EditorSettingWatcher.OnEditorFocused += OnEditorFocused;
+            EditorSettingWatcher.OnEditorLostFocus += OnEditorLostFocus;
+            // Repaint window if undo redo
+            Undo.undoRedoPerformed += Repaint;
         }
 
-        private void OnDisable() => EditorSettingWatcher.OnEditorFocused -= OnEditorFocused;
+        private void OnDisable()
+        {
+            EditorSettingWatcher.OnEditorFocused -= OnEditorFocused;
+            EditorSettingWatcher.OnEditorLostFocus -= OnEditorLostFocus;
+            Undo.undoRedoPerformed -= Repaint;
+        }
+
+        // 当编辑器失去焦点时，保存配置，避免 svn、git 等外部的修改导致数据被覆盖
+        private void OnEditorLostFocus()
+        {
+            TinyRpcEditorSettings.Save();
+        }
 
         private void OnEditorFocused()
         {
-            TinyRpcEditorSettings.LoadOrCreate();
+            // 当编辑器重新 focus 时，重新加载实例，避免某些情景下 svn 、git 等外部修改了数据却无法同步的异常。
+            TinyRpcEditorSettings.TryLoadOrCreate(true);
             editorSettingsLayout.OnEnable();
             runtimeSettingsLayout.OnEnable();
             this.Repaint();
