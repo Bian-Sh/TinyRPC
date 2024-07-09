@@ -17,6 +17,8 @@ namespace zFramework.TinyRPC
         private readonly string scope;
         private readonly UdpClient udpClient;
         private bool isRunning = true;
+        private readonly float timeout;
+        private CancellationTokenSource timeout_cts;
         /// <summary>
         ///  是否处于等待状态
         /// </summary>
@@ -27,13 +29,18 @@ namespace zFramework.TinyRPC
         ///   第一个参数是 IP, 第二个参数是 port
         /// </summary>
         public Action<string, int> OnServerDiscovered;
+        /// <summary>
+        ///   当网络发现超时时触发，超时时间由 timeout 决定
+        ///   每个 loop 超时都会触发一次
+        /// </summary>
+        public Action OnDiscoveryTimeout;
 
         /// <summary>
         ///  网络发现客户端
         /// </summary>
         /// <param name="port">DiscoveryServer 监听端口，请向此端口广播</param>
         /// <param name="scope">与服务器识别的简易标识符</param>
-        public DiscoveryClient(int port, string scope)
+        public DiscoveryClient(int port, string scope, float timeout = 10f)
         {
             // 由于使用了 | 作为分隔符，所以需要对 scope 进行校验
             if (scope.Contains("|"))
@@ -50,6 +57,7 @@ namespace zFramework.TinyRPC
                 Debug.LogWarning($"{nameof(DiscoveryClient)} is not created at main thread, this may cause some problem!");
             }
             ReceiveAsync();
+            this.timeout = timeout;
         }
 
         public void Start()
@@ -63,6 +71,22 @@ namespace zFramework.TinyRPC
                     {
                         Debug.Log($"{nameof(DiscoveryClient)} Is{(isWaiting ? "Waiting " : $"Scanning {port} ")}!");
                         await WaitUntilAsync(() => !isWaiting);
+                        // 实现一个超时机制，如果超时则触发 OnDiscoveryTimeout 事件
+                        if (timeout_cts == null)
+                        {
+                            timeout_cts = new CancellationTokenSource();
+                            timeout_cts.CancelAfter((int)(timeout * 1000));
+                            timeout_cts.Token.Register(() =>
+                            {
+                                if (!isWaiting)
+                                {
+                                    Debug.Log($"{nameof(DiscoveryClient)}: Discovery Timeout !");
+                                    context.Post(_ => OnDiscoveryTimeout?.Invoke(), null);
+                                    timeout_cts ?.Dispose();
+                                    timeout_cts = null;
+                                }
+                            });
+                        }
                         await udpClient.SendAsync(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, port));
                         await Task.Delay(1500); // 1.5s 扫描间隔
                     }
@@ -94,6 +118,9 @@ namespace zFramework.TinyRPC
                                 var arr = message.Split('|');
                                 if (arr.Length == 2 && int.TryParse(arr[1], out int port))
                                 {
+                                    timeout_cts?.Dispose();
+                                    timeout_cts = null;
+
                                     var host = result.RemoteEndPoint.Address.ToString();
                                     var ip = host.Split(':')[0];
                                     isWaiting = true; //二话不说先卡住，保证事件只执行一次，是否解锁由调用方决定！
@@ -129,6 +156,7 @@ namespace zFramework.TinyRPC
 
         public void Stop()
         {
+            timeout_cts?.Dispose();
             isRunning = false;
             isWaiting = false;
             udpClient.Close();
