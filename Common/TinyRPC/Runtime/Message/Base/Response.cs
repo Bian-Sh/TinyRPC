@@ -12,10 +12,10 @@ namespace zFramework.TinyRPC.Messages
         public int Rid { get => rid; set => rid = value; }
         /// <inheritdoc/>
         public string Error { get => error; set => error = value; }
-        public bool IsRecycled { get; set; }
+        bool IReusable.RequireRecycle { get; set; }
+        void IDisposable.Dispose() => ObjectPool.Recycle(this);
         public virtual void OnRecycle()
         {
-            IsRecycled = true;
             error = default;
             rid = default;
         }

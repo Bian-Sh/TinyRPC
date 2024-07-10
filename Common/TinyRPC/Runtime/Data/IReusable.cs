@@ -1,8 +1,10 @@
+using System;
+
 namespace zFramework.TinyRPC
 {
-    public interface IReusable
+    public interface IReusable:IDisposable
     {
-        bool IsRecycled { get; set; }
+        bool RequireRecycle { get; set; }
         void OnRecycle();
     }
 }

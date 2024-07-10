@@ -59,7 +59,7 @@ namespace zFramework.TinyRPC
         }
         #region RPC 
         internal void Reply(IMessage message) => Send(message);
-
+        
         ///<summary>
         /// 调用RPC方法并返回响应结果。
         /// </summary>
@@ -69,6 +69,7 @@ namespace zFramework.TinyRPC
         /// <exception cref="RpcResponseException">Rpc 响应时抛出的异常</exception>
         internal async Task<T> Call<T>(IRequest request) where T : class, IResponse, new()
         {
+            using var _ = request;
             // 校验 RPC 消息匹配
             var type = GetResponseType(request);
             if (type != typeof(T))
@@ -81,7 +82,6 @@ namespace zFramework.TinyRPC
 
             Send(request);  // do not catch any exception here,just let it throw out
             var response = await RpcWaitingTask(request);
-            Recycle(request); // after waiting task, recycle request 
 
             if (!string.IsNullOrEmpty(response.Error))// 如果服务器告知了错误！
             {
@@ -89,7 +89,7 @@ namespace zFramework.TinyRPC
             }
             return response as T;
         }
-
+        
         internal void HandleResponse(IResponse response)
         {
             if (rpcInfoPairs.TryRemove(response.Rid, out var rpcInfo))

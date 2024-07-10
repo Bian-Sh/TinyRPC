@@ -84,35 +84,35 @@ namespace zFramework.TinyRPC
                 }
             }
         }
-
-        public void Broadcast(Message message)
+        
+        public void Broadcast(Message message,params Session[] exclude)
         {
+            // 利用 IDisposable 的 using 语法糖，确保 message 在使用完毕后被回收
+            using var _ = message;
             // InvalidOperationException: Collection was modified; enumeration operation may not execute.
             var cached = new List<Session>(sessions);
-            // as message will be recycled, we need to do some stuff to avoid it
-            // hack message type to avoid it being recycled
-            // tell object pool a fake news that this message is recycled
-            message.IsRecycled = true;
+            var list = new List<Session>(exclude);
             foreach (var session in cached)
             {
+                if (list.Contains(session))
+                {
+                    continue;
+                }
                 Send(session, message);
             }
-            message.IsRecycled = false;
-            ObjectPool.Recycle(message);
             cached.Clear();
         }
 
         public void BroadcastOthers(Session self, Message message)
         {
+            // 利用 IDisposable 的 using 语法糖，确保 message 在使用完毕后被回收
+            using var _ = message;
             var cached = new List<Session>(sessions);
             cached.Remove(self);
-            message.IsRecycled = true;
             foreach (var s in cached)
             {
                 Send(s, message);
             }
-            message.IsRecycled = false;
-            ObjectPool.Recycle(message);
             cached.Clear();
         }
 
