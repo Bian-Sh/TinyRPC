@@ -7,7 +7,7 @@ namespace zFramework.TinyRPC
 {
     public static class ObjectPool
     {
-        static readonly ConcurrentDictionary<Type, InternalPool> pools = new();
+        public static readonly ConcurrentDictionary<Type, InternalPool> pools = new();
         private static InternalPool GetPool<T>() where T : class, IReusable => GetPool(typeof(T));
         private static InternalPool GetPool(Type type)
         {
@@ -35,6 +35,7 @@ namespace zFramework.TinyRPC
     {
         internal ConcurrentStack<IReusable> items; //线程安全 栈
         public int Capacity { get; set; } //池子有多大
+        public int Counted => counted; //当前池子里有多少
         private int counted;
         private readonly Type type;
         internal InternalPool(Type type, int capacity = 200)

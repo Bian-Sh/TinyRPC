@@ -19,5 +19,5 @@ MonoBehaviour:
   - Response
   pingInterval: 1000
   pingRetry: 3
-  rpcTimeout: 2000
+  rpcTimeout: 20000
   logEnabled: 0
