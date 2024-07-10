@@ -6,16 +6,9 @@ namespace zFramework.TinyRPC.Messages
     [Serializable]
     public class Message : IMessage
     {
-        public bool IsRecycled { get; set; }
-
-        public virtual void OnRecycle()
-        {
-            IsRecycled = true;
-        }
-
-        public override string ToString()
-        {
-            return JsonUtility.ToJson(this);
-        }
+        bool IReusable.RequireRecycle { get; set; }
+        void IDisposable.Dispose() => ObjectPool.Recycle(this);
+        public virtual void OnRecycle() { }
+        public override string ToString() => JsonUtility.ToJson(this);
     }
 }

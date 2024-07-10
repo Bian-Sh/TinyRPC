@@ -37,7 +37,7 @@ namespace zFramework.TinyRPC
         public int Capacity { get; set; } //池子有多大
         private int counted;
         private readonly Type type;
-        internal InternalPool(Type type, int capacity = 60)
+        internal InternalPool(Type type, int capacity = 200)
         {
             this.type = type;
             this.Capacity = capacity;
@@ -48,17 +48,21 @@ namespace zFramework.TinyRPC
         {
             if (!items.IsEmpty && items.TryPop(out var item))
             {
-                item.IsRecycled = false;
                 Interlocked.Decrement(ref counted);
-                return item;
             }
-            item = Activator.CreateInstance(type) as IReusable;
+            else
+            {
+                item = Activator.CreateInstance(type) as IReusable;
+            }
+            //只要是通过 Allocate API获取的实例都会被标记为需要回收
+            item.RequireRecycle = true;
             return item;
         }
         public void Recycle(IReusable target) //回收
         {
-            if (null != target && !target.IsRecycled)
+            if (null != target && target.RequireRecycle)
             {
+                target.RequireRecycle = false;
                 target.OnRecycle();
                 if (counted < Capacity)
                 {

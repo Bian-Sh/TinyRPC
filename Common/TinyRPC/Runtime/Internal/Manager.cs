@@ -165,10 +165,10 @@ namespace zFramework.TinyRPC
             var requests = types.Where(type => type.IsSubclassOf(typeof(Request)));
             foreach (var type in requests)
             {
-                var handler = Activator.CreateInstance(typeof(RpcMessageHandler<,>)
-                    .MakeGenericType(type, GetResponseType(type))) as IRpcMessageHandler;
                 try
                 {
+                    var handler = Activator.CreateInstance(typeof(RpcMessageHandler<,>)
+                        .MakeGenericType(type, GetResponseType(type))) as IRpcMessageHandler;
                     RpcMessageHandlers.Add(type, handler);
                 }
                 catch (Exception e)
@@ -181,9 +181,9 @@ namespace zFramework.TinyRPC
             var messages = types.Where(type => type.IsSubclassOf(typeof(Message)));
             foreach (var type in messages)
             {
-                var handler = Activator.CreateInstance(typeof(NormalMessageHandler<>).MakeGenericType(type)) as INormalMessageHandler;
                 try
                 {
+                    var handler = Activator.CreateInstance(typeof(NormalMessageHandler<>).MakeGenericType(type)) as INormalMessageHandler;
                     NormalMessageHandlers.Add(type, handler);
                 }
                 catch (Exception e)
@@ -261,27 +261,25 @@ namespace zFramework.TinyRPC
 
         internal static async void HandleRequest(Session session, IRequest request)
         {
+            // 利用 IDisposable 的 using 语法糖，确保 request 在使用完毕后被回收
+            using var _ = request;
             var type = request.GetType();
             var error = string.Empty;
-            IResponse response;
 
             // fallback , 如果 RPC 消息对没有注册，返回默认的 Response，并告知错误
             // 但是这几乎没有可能发生，因为在注册时已经做了检查，除非消息程序集 "com.zframework.tinyrpc.generated" 被恶意修改
             if (!rpcMessagePairs.TryGetValue(type, out var responseType))
             {
+                using var fallback = Allocate<Response>();
                 error = $"RPC 请求 {request.GetType().Name} 没有找到对应的 Response 类型！";
-                response = new Response
-                {
-                    Rid = request.Rid,
-                    Error = error
-                };
+                fallback .Rid = request.Rid;
+                fallback. Error = error;
                 Debug.LogWarning($"{nameof(Manager)}: {error}");
-                session.Reply(response);
-                Recycle(request);
+                session.Reply(fallback);
                 return;
             }
 
-            response = Allocate(responseType) as IResponse;
+            using var response = Allocate(responseType) as IResponse;
             response.Rid = request.Rid;
 
             if (RpcMessageHandlers.TryGetValue(type, out var handler))
@@ -314,10 +312,6 @@ namespace zFramework.TinyRPC
             // 为避免在主线程上等待太久，将回复操作放到其他线程
             await ToOtherThread;
             session.Reply(response);
-
-            // 回收框架内可控资源
-            Recycle(response);
-            Recycle(request);
         }
 
         // 获取消息对应的 Response 类型

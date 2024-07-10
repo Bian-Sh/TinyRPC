@@ -12,8 +12,8 @@ namespace zFramework.TinyRPC.Messages
         public string type;
         public string data;
         public IMessage Message { get; set; }
-        public bool IsRecycled { get; set; }
-
+        bool IReusable.RequireRecycle { get; set; }
+        void IDisposable.Dispose() => Recycle(this);
         public void OnBeforeSerialize()
         {
             type = Message.GetType().Name;
@@ -46,7 +46,6 @@ namespace zFramework.TinyRPC.Messages
 
         public void OnRecycle()
         {
-            IsRecycled = true;
             Message = null;
             type = default;
             data = default;

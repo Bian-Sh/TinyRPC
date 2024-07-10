@@ -15,11 +15,10 @@ namespace zFramework.TinyRPC
         public int Rid { get => id; set => id = value; }
         public int Timeout { get; set; } // 在 Ping 对传中采用默认timeout,无需序列化报告给对方
         public string Error { get => error; set => error = value; }
-
-        public bool IsRecycled { get; set; }
+        bool IReusable.RequireRecycle { get; set; }
+        void IDisposable.Dispose() => ObjectPool.Recycle(this);
         public void OnRecycle()
         {
-            IsRecycled = true;
             time = default;
             error = default;
             id = default;
