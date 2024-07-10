@@ -157,6 +157,7 @@ namespace zFramework.TinyRPC
         public void Stop()
         {
             timeout_cts?.Dispose();
+            timeout_cts = null;
             isRunning = false;
             isWaiting = false;
             udpClient.Close();
