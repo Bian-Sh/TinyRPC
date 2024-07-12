@@ -11,6 +11,11 @@ namespace zFramework.TinyRPC
         public static Func<byte[], byte[]> Decrypt;
         internal static byte[] Serialize(IMessage message)
         {
+            // 非 rpc 消息，直接释放
+            if (message is not IRequest && message is not IResponse)
+            {
+                using var _ = message;
+            }
             // MessageWrapper 池化
             using var wrapper = Allocate<MessageWrapper>();
             // 将消息包装
