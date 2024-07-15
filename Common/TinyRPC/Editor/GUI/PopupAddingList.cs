@@ -126,6 +126,10 @@ public class PopupAddingList
     }
     private float OnCalcElementHeight(int index)
     {
+        if (m_list.count == 0)
+        {
+            return EditorGUIUtility.singleLineHeight;
+        }
         var ele = m_list.serializedProperty.GetArrayElementAtIndex(index);
         var height = EditorGUI.GetPropertyHeight(ele, GUIContent.none, true);
         height += 2;
