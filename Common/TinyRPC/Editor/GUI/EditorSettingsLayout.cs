@@ -254,7 +254,7 @@ namespace zFramework.TinyRPC.Editors
             rt.width = 200;
             rt.height = 48;
             rt.x = (window.position.width - rt.width) / 2;
-            rt.y = window.position.height - rt.height - 10;
+            rt.y = window.position.height - rt.height * 2 - 20;
 
             var isCompiling = EditorApplication.isCompiling;
             generateBt_cnt.text = isCompiling ? "编译中，请稍后..." : "生成消息实体类";
@@ -267,13 +267,13 @@ namespace zFramework.TinyRPC.Editors
             {
                 if (GUI.Button(rt, generateBt_cnt))
                 {
-                    //生成代码前要求工程不得有任何编译异常
-                    if (EditorUtility.scriptCompilationFailed)
-                    {
-                        Debug.LogError($"代码生成失败，请先解决工程编译错误！");
-                        return;
-                    }
                     HandlerMessageGenerate();
+                    Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll();
+                }
+                rt.y += rt.height + 4;
+                if (GUI.Button(rt, "同步工程文件"))
+                {
+                    Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll();
                 }
             }
         }
