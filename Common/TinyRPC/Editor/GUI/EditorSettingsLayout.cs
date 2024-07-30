@@ -263,14 +263,17 @@ namespace zFramework.TinyRPC.Editors
             {
                 generateBt_cnt.text = "请先解决工程编译错误...";
             }
-            using (var disablescop = new EditorGUI.DisabledScope(isCompiling || isCompilefailed))
+            using (new EditorGUI.DisabledScope(isCompiling || isCompilefailed))
             {
                 if (GUI.Button(rt, generateBt_cnt))
                 {
                     HandlerMessageGenerate();
                     Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll();
                 }
-                rt.y += rt.height + 4;
+            }
+            rt.y += rt.height + 4;
+            using (new EditorGUI.DisabledScope(isCompiling))
+            {
                 if (GUI.Button(rt, "同步工程文件"))
                 {
                     Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll();
