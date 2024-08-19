@@ -19,6 +19,7 @@ namespace zFramework.TinyRPC
         public bool IsAlive { get; private set; }
         public IPEndPoint IPEndPoint { get; private set; }
         private readonly TinyRpcSettings settings;
+        private object locker = new();
 
         //todo: TcpClient will be replaced by Transport, so that we can use other transport protocol such as kcp and websocket
         //todo: TcpClient 将被 Transport 替换，这样我们就可以使用其他传输协议，如 kcp 和 websocket
@@ -48,9 +49,12 @@ namespace zFramework.TinyRPC
             {
                 var stream = client.GetStream();
                 var head = BitConverter.GetBytes(bytes.Length);
-                stream.Write(head, 0, head.Length);
-                stream.Write(bytes, 0, bytes.Length);
-                stream.Flush();
+                lock (locker)
+                {
+                    stream.Write(head, 0, head.Length);
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush();
+                }
             }
             else
             {
