@@ -16,9 +16,9 @@ namespace zFramework.TinyRPC
         private readonly int port; // remote binding port
         private readonly string scope;
         private readonly UdpClient udpClient;
-        private bool isRunning = true;
         private readonly float timeout;
         private CancellationTokenSource timeout_cts;
+        private CancellationTokenSource cts;
         /// <summary>
         ///  是否处于等待状态
         /// </summary>
@@ -50,6 +50,7 @@ namespace zFramework.TinyRPC
             this.port = port;
             this.scope = scope;
             this.context = SynchronizationContext.Current;
+            this.cts = new CancellationTokenSource();
             udpClient = new UdpClient();
             // log if instance create not at main thread
             if (Thread.CurrentThread.ManagedThreadId != 1)
@@ -65,12 +66,12 @@ namespace zFramework.TinyRPC
             Task.Run(async () =>
             {
                 var bytes = Encoding.UTF8.GetBytes(scope);
-                while (isRunning)
+                while (true)
                 {
                     try
                     {
                         Debug.Log($"{nameof(DiscoveryClient)} Is{(isWaiting ? "Waiting " : $"Scanning {port} ")}!");
-                        await WaitUntilAsync(() => !isWaiting);
+                        await WaitUntilAsync(() => isWaiting == false);
                         // 实现一个超时机制，如果超时则触发 OnDiscoveryTimeout 事件
                         if (timeout_cts == null)
                         {
@@ -82,11 +83,12 @@ namespace zFramework.TinyRPC
                                 {
                                     Debug.Log($"{nameof(DiscoveryClient)}: Discovery Timeout !");
                                     context.Post(_ => OnDiscoveryTimeout?.Invoke(), null);
-                                    timeout_cts ?.Dispose();
-                                    timeout_cts = null;
                                 }
+                                timeout_cts?.Dispose();
+                                timeout_cts = null;
                             });
                         }
+                        cts.Token.ThrowIfCancellationRequested();
                         await udpClient.SendAsync(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, port));
                         await Task.Delay(1500); // 1.5s 扫描间隔
                     }
@@ -103,11 +105,12 @@ namespace zFramework.TinyRPC
         {
             Task.Run(async () =>
             {
-                while (isRunning)
+                while (true)
                 {
                     try
                     {
                         Debug.Log($"{nameof(DiscoveryClient)} Is Wait For Server Echo !");
+                        cts.Token.ThrowIfCancellationRequested();
                         var result = await udpClient.ReceiveAsync();
                         if (result.Buffer.Length != 0)
                         {
@@ -143,11 +146,12 @@ namespace zFramework.TinyRPC
         {
             while (!predicate())
             {
-                // 如果存在来自 DiscoveryServer 的数据报那就把它们读完
-                // 避免 isWaiting =false(不等待)时，OnServerDiscovered 事件被过时的缓存数据触发
                 while (udpClient.Available > 0)
                 {
+                    // 如果存在来自 DiscoveryServer 的数据报那就把它们读完
+                    // 避免 isWaiting =false(不等待)时，OnServerDiscovered 事件被过时的缓存数据触发
                     // let it throw out if there is any exception
+                    cts.Token.ThrowIfCancellationRequested();
                     await udpClient.ReceiveAsync();
                 }
                 await Task.Delay(500);
@@ -156,10 +160,11 @@ namespace zFramework.TinyRPC
 
         public void Stop()
         {
+            isWaiting = false;
+            cts?.Dispose();
+            cts = null;
             timeout_cts?.Dispose();
             timeout_cts = null;
-            isRunning = false;
-            isWaiting = false;
             udpClient.Close();
         }
     }
