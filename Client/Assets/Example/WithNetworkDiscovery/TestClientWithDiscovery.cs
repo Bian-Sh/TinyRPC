@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -49,10 +50,20 @@ namespace zFramework.TinyRPC.Samples
 
             discoveryClient = new DiscoveryClient(discoveryPort, scope);
             discoveryClient.OnServerDiscovered += OnServerDiscovered;
+            discoveryClient.OnDiscoveryTimeout += OnDisplayTimeout;
             discoveryClient.Start();
         }
+
+        private void OnDisplayTimeout()
+        {
+            Debug.Log($"{nameof(TestClientWithDiscovery)}: Discovery Timeout");
+            ping.text = "Discovery Timeout";
+        }
+
         private void OnApplicationQuit()
         {
+            discoveryClient.OnDiscoveryTimeout -= OnDisplayTimeout;
+            discoveryClient.OnServerDiscovered -= OnServerDiscovered;
             discoveryClient?.Stop();
             client?.Stop();
         }
