@@ -72,6 +72,7 @@ namespace zFramework.TinyRPC
                     {
                         Debug.Log($"{nameof(DiscoveryClient)} Is{(isWaiting ? "Waiting " : $"Scanning {port} ")}!");
                         await WaitUntilAsync(() => isWaiting == false);
+                        cts.Token.ThrowIfCancellationRequested();
                         // 实现一个超时机制，如果超时则触发 OnDiscoveryTimeout 事件
                         if (timeout_cts == null)
                         {
@@ -161,6 +162,7 @@ namespace zFramework.TinyRPC
         public void Stop()
         {
             isWaiting = false;
+            cts?.Cancel();
             cts?.Dispose();
             cts = null;
             timeout_cts?.Dispose();
