@@ -42,7 +42,7 @@ public class TestServerWithDiscovery : MonoBehaviour
 
         discoveryServer = new DiscoveryServer(discoveryPort, scope, port);
         discoveryServer.Start();
-        Debug.Log($"{nameof(TestServerWithDiscovery)}:  discovery server started broadcast to port {discoveryPort} ！！！");
+        Debug.Log($"{nameof(TestServerWithDiscovery)}: discovery server started and listening on port {discoveryPort} ！！！");
     }
 
 
