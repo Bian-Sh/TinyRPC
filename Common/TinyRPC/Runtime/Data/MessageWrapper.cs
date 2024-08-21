@@ -18,12 +18,7 @@ namespace zFramework.TinyRPC.Messages
         {
             type = Message.GetType().Name;
             data = JsonUtility.ToJson(Message);
-            // Request 在这里不能回收，call 还需要使用
-            if (Message is not IRequest)
-            {
-                Recycle(Message);
-            }
-        }
+         }
 
         public void OnAfterDeserialize()
         {

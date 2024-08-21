@@ -87,8 +87,6 @@ namespace zFramework.TinyRPC
         
         public void Broadcast(Message message,params Session[] exclude)
         {
-            // 利用 IDisposable 的 using 语法糖，确保 message 在使用完毕后被回收
-            using var _ = message;
             // InvalidOperationException: Collection was modified; enumeration operation may not execute.
             var cached = new List<Session>(sessions);
             var list = new List<Session>(exclude);
@@ -105,8 +103,6 @@ namespace zFramework.TinyRPC
 
         public void BroadcastOthers(Session self, Message message)
         {
-            // 利用 IDisposable 的 using 语法糖，确保 message 在使用完毕后被回收
-            using var _ = message;
             var cached = new List<Session>(sessions);
             cached.Remove(self);
             foreach (var s in cached)
