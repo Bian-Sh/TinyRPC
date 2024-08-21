@@ -43,14 +43,13 @@ namespace zFramework.TinyRPC
 
         internal void Send(IMessage message)
         {
-            //todo :need a lock ?
-            var bytes = SerializeHelper.Serialize(message);
             if (IsAlive)
             {
-                var stream = client.GetStream();
-                var head = BitConverter.GetBytes(bytes.Length);
                 lock (locker)
                 {
+                    var bytes = SerializeHelper.Serialize(message);
+                    var stream = client.GetStream();
+                    var head = BitConverter.GetBytes(bytes.Length);
                     stream.Write(head, 0, head.Length);
                     stream.Write(bytes, 0, bytes.Length);
                     stream.Flush();
