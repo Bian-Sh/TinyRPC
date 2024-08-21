@@ -36,8 +36,13 @@ namespace zFramework.TinyRPC.Editors
             string path;
             if (currentLocationType == LocationType.Assets)
             {
-                path = FileUtil.GetProjectRelativePath(generatedScriptLocation);
-                path =  path + "/" + ProtoFileContainer;
+                var related = FileUtil.GetProjectRelativePath(generatedScriptLocation);
+                path = Path.Combine(related, "Assets/TinyRPC/Generated", ProtoFileContainer);
+                var dir = Path.GetDirectoryName(path);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
             }
             else
             {
