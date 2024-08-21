@@ -48,12 +48,18 @@ public class PopupAddingList
             var name = Path.GetFileName(path);
             if (File.Exists(path) && path.EndsWith(".proto"))
             {
-                var alsoDeleteFile = EditorUtility.DisplayDialog("删除提示", $"是否同时删除文件: {name}？", "删除", "取消");
+                var alsoDeleteFile = EditorUtility.DisplayDialog("删除提示", $"是否同时删除文件: {name}？", "删除", "不删除");
                 if (alsoDeleteFile)
                 {
                     try
                     {
                         FileUtil.DeleteFileOrDirectory(path);
+                        // 如果 meta 文件存在，也删除
+                        var meta = $"{path}.meta";
+                        if (File.Exists(meta))
+                        {
+                            FileUtil.DeleteFileOrDirectory(meta);
+                        }
                         AssetDatabase.Refresh();
                     }
                     catch (Exception e)
