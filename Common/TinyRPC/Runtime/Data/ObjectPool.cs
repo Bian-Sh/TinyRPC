@@ -2,12 +2,29 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using UnityEngine;
+/*
+通过 ObjectPool.Allocate 获取的消息实例可以使用 using 语句块可以自动回收
+new 出来的消息实例不在对象池管理范围内，不会自动回收
+以下为使用示例：
+class Foo 
+{
+    public void Bar()
+    {
+        using var request = ObjectPool.Allocate<AnyCustomRequest>();
+        // do something
+
+        using var response = TinyClient.Call<AnyCustomResponse>(request);
+        // do something
+    }
+}
+使用起来非常简单，使用 using 关键字，其他的事情都交给 ObjectPool 来处理
+ */
 
 namespace zFramework.TinyRPC
 {
     public static class ObjectPool
     {
-        static readonly ConcurrentDictionary<Type, InternalPool> pools = new();
+        public static readonly ConcurrentDictionary<Type, InternalPool> pools = new();
         private static InternalPool GetPool<T>() where T : class, IReusable => GetPool(typeof(T));
         private static InternalPool GetPool(Type type)
         {
@@ -26,15 +43,30 @@ namespace zFramework.TinyRPC
             return pool;
         }
         public static T Allocate<T>() where T : class, IReusable => GetPool<T>().Allocate() as T;
-        public static void Recycle<T>(T target) where T : class, IReusable => GetPool<T>().Recycle(target);
+        public static void Recycle<T>(T target) where T : class, IReusable
+        {
+            if (target.RequireRecycle)
+            {
+                // 避免非池化对象导致构建和占用对象池
+                GetPool<T>().Recycle(target);
+            }
+        }
+
         public static IReusable Allocate(Type type) => GetPool(type).Allocate();
-        public static void Recycle(IReusable target) => GetPool(target.GetType()).Recycle(target);
+        public static void Recycle(IReusable target)
+        {
+            if (target.RequireRecycle)
+            {
+                GetPool(target.GetType()).Recycle(target);
+            }
+        }
     }
 
     public sealed class InternalPool
     {
         internal ConcurrentStack<IReusable> items; //线程安全 栈
         public int Capacity { get; set; } //池子有多大
+        public int Counted => counted; //当前池子里有多少
         private int counted;
         private readonly Type type;
         internal InternalPool(Type type, int capacity = 200)
@@ -54,7 +86,6 @@ namespace zFramework.TinyRPC
             {
                 item = Activator.CreateInstance(type) as IReusable;
             }
-            //只要是通过 Allocate API获取的实例都会被标记为需要回收
             item.RequireRecycle = true;
             return item;
         }
