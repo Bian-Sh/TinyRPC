@@ -107,6 +107,9 @@ namespace zFramework.TinyRPC.Editors
             }
         }
 
+        // Router for EditorSettingsLayout
+        internal string GetProtoFileContianerInnerPath() => editorSettingsLayout.GetProtoFileContianerInnerPath();
+
         #region GUIContents for tabs
         static GUIContent BT_LT = new GUIContent("Editor", "编辑器下使用的配置");
         static GUIContent BT_RT = new GUIContent("Runtime", "运行时使用的配置");

@@ -56,14 +56,14 @@ namespace zFramework.TinyRPC.Editors
             this.position = rect;
             this.minSize = new Vector2(160, rect.height);
         }
-        public static Task<string> WaitForInputAsync(TinyRpcEditorSettings settings, Rect rect)
+        public static Task<string> WaitForInputAsync(TinyRpcEditorWindow window, Rect rect)
         {
             if (!instance)
             {
                 instance = CreateInstance<PopupInputWindow>();
                 instance.rect = rect;
                 // calc if it is duplicated
-                var dir = settings.GetProtoFileContianerPath();
+                var dir = window.GetProtoFileContianerInnerPath();
                 if (!Directory.Exists(dir))
                 {
                     instance.files = new string[0];

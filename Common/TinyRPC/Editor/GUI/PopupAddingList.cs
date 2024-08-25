@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -15,10 +16,10 @@ public class PopupAddingList
     // 重绘 ReorderableList Remove 功能，实现点击“-”出现确认弹窗：是否删除该 proto 文件
     // 拖入 proto 文件需要被自动添加到列表中
     readonly ReorderableList m_list;
-    readonly EditorWindow window;
+    readonly TinyRpcEditorWindow window;
     readonly SerializedObject serializedObject;
     readonly SerializedProperty protoProperty;
-    public PopupAddingList(EditorWindow window, SerializedObject so, SerializedProperty property)
+    public PopupAddingList(TinyRpcEditorWindow window, SerializedObject so, SerializedProperty property)
     {
         serializedObject = so;
         protoProperty = property;
@@ -90,25 +91,27 @@ public class PopupAddingList
             window.ShowNotification(new GUIContent("请等待编译完成！"));
             return;
         }
+        var innerpath = window.GetProtoFileContianerInnerPath();
+        if (!Directory.Exists(innerpath))
+        {
+            // 提示： 请先构建消息文件保存路径
+            window.ShowNotification(new GUIContent("请先构建消息文件保存路径！"));
+            return;
+        }
 
         var rect = new Rect(buttonRect.position, buttonRect.size);
         rect.x += window.position.x - 60;
         rect.y += window.position.y + 40;
-        var settings = TinyRpcEditorSettings.Instance;
-        var protoName = await PopupInputWindow.WaitForInputAsync(settings, rect);
+        var protoName = await PopupInputWindow.WaitForInputAsync(window, rect);
         if (!string.IsNullOrEmpty(protoName))
         {
-            var path = settings.GetProtoFileContianerPath();
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
-            //1. 指定路径生成一个 proto 文件
-            path = Path.Combine(path, $"{protoName}.proto");
+            // 1. 创建 proto 文件
             var content = "#请在下面撰写网络协议： ";
-            File.WriteAllText(path, content, Encoding.UTF8);
+            var innerfile = Path.Combine(innerpath, $"{protoName}.proto");
+            File.WriteAllText(innerfile, content, Encoding.UTF8);
             AssetDatabase.Refresh();
-            var asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(path);
+            var asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(innerfile);
+
             if (asset)
             {
                 // 2. 添加到列表中

@@ -31,25 +31,6 @@ namespace zFramework.TinyRPC.Editors
         [Tooltip("将该列表中出现的 Common 消息生成 partial class 类型而不是默认的 struct 类型, 如果出现 \"*\" 则全部生成 partial class 类型...")]
         public List<string> generateAsPartialClass;
 
-        public string GetProtoFileContianerPath()
-        {
-            string path;
-            if (currentLocationType == LocationType.Assets)
-            {
-                var related = FileUtil.GetProjectRelativePath(generatedScriptLocation);
-                path = Path.Combine(related, "Assets/TinyRPC/Generated", ProtoFileContainer);
-                var dir = Path.GetDirectoryName(path);
-                if (!Directory.Exists(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-            }
-            else
-            {
-                path = $"Packages/{AsmdefName[..^7]}/{ProtoFileContainer}";
-            }
-            return path;
-        }
     }
 }
 

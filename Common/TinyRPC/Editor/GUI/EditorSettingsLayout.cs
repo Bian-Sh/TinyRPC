@@ -15,7 +15,7 @@ namespace zFramework.TinyRPC.Editors
     public class EditorSettingsLayout
     {
         TinyRpcEditorSettings settings;
-        readonly EditorWindow window;
+        readonly TinyRpcEditorWindow window;
         SerializedObject serializedObject;
         SerializedProperty protoProperty;
         SerializedProperty asmdefsProperty;
@@ -27,7 +27,7 @@ namespace zFramework.TinyRPC.Editors
         LocationType selectedLocationType;
         string resolvedSubLocation = "Common"; // 从 settings.generatedScriptLocation 中提取的子路径
         string selectedSubLocation = "Common"; // 用户选择的子路径
-        public EditorSettingsLayout(EditorWindow window) => this.window = window;
+        public EditorSettingsLayout(TinyRpcEditorWindow window) => this.window = window;
 
         internal void OnEnable() => InitLayout();
 
@@ -91,7 +91,17 @@ namespace zFramework.TinyRPC.Editors
             }
             else
             {
-                EditorGUILayout.HelpBox("未找到消息存储文件夹，请至少构建一个 Proto 文件！", UnityEditor.MessageType.Error);
+                EditorGUILayout.HelpBox("构建一个 Proto 文件以创建脚本和协议存储文件夹！", UnityEditor.MessageType.Error);
+                // 在 HelpBox 右侧绘制一个按钮 “fix”  ，用于创建 TinyRPC Generated 文件夹
+                var rect = GUILayoutUtility.GetLastRect();
+                rect.x = rect.width - 40;
+                rect.y += rect.height / 2 - 10;
+                rect.width = 38;
+                rect.height = 20;
+                if (GUI.Button(rect, "Fix"))
+                {
+                    EnsurePackageThere();
+                }
             }
 
             using (new EditorGUILayout.HorizontalScope())
@@ -283,24 +293,26 @@ namespace zFramework.TinyRPC.Editors
 
         private void HandlerMessageGenerate()
         {
-            try
+            var location = ResolvePhysicLocation(selectedLocationType, selectedSubLocation);
+
+            if (!Directory.Exists(location))
             {
-                AssetDatabase.DisallowAutoRefresh();
-                var location = ResolvePhysicLocation(selectedLocationType, selectedSubLocation);
-                CreateNewPackage(location);
-                PostProcess(location);
-                window.ShowNotification(tips);
-                Debug.Log($"TinyRPC 消息生成完成！ ");
+                window.ShowNotification(new GUIContent("请先构建消息文件保存路径！"));
+                return;
             }
-            catch (Exception e)
+            if (settings.protos.Count(p => p != null) == 0)
             {
-                Debug.LogError($"TinyRPC CodeGen Error :{e} ");
+                window.ShowNotification(new GUIContent("请至少指定一个 .proto 文件！"));
+                return;
             }
-            finally
-            {
-                AssetDatabase.AllowAutoRefresh();
-                AssetDatabase.Refresh();
-            }
+
+            AssetDatabase.DisallowAutoRefresh();
+            CreateNewPackage(location);
+            PostProcess(location);
+            window.ShowNotification(tips);
+            AssetDatabase.AllowAutoRefresh();
+            AssetDatabase.Refresh();
+            Debug.Log($"TinyRPC 消息生成完成！ ");
         }
 
         private void PostProcess(string dest)
@@ -320,8 +332,9 @@ namespace zFramework.TinyRPC.Editors
             var manifest = File.ReadAllLines(packagePath);
             var newLines = manifest.Where(v => !v.Contains("com.zframework.tinyrpc.generated")).ToArray();
             File.WriteAllLines(packagePath, newLines);
-
+            AssetDatabase.Refresh();
             // 导入此文件夹
+            AssetDatabase.DisallowAutoRefresh();
             switch (selectedLocationType)
             {
                 case LocationType.Assets:
@@ -333,20 +346,30 @@ namespace zFramework.TinyRPC.Editors
                     break;
                 case LocationType.Packages:
                     settings.currentLocationType = LocationType.Packages;
-                    await Client.Add("file:Packages/TinyRPC Generated");
+                    //await Client.Add("file:Packages/TinyRPC Generated"); // is this api changed ?
+                    await Client.Add("file:TinyRPC Generated");
                     break;
             }
+            AssetDatabase.AllowAutoRefresh();
+            AssetDatabase.Refresh();
             Client.Resolve();
         }
-
+        public async void EnsurePackageThere()
+        {
+            var location = ResolvePhysicLocation(selectedLocationType, selectedSubLocation);
+            if (!Directory.Exists(location))
+            {
+                var protoPath = Path.Combine(location, TinyRpcEditorSettings.ProtoFileContainer);
+                Directory.CreateDirectory(protoPath);
+                TryCreatePackageJsonFile(location);
+                TryCreateAssemblyDefinitionFile(location);
+                AssetDatabase.Refresh();
+                await RefreshPackageFileSystemAsync();
+            }
+        }
 
         private void CreateNewPackage(string location)
         {
-            if (settings.protos.Count(p => p != null) == 0)
-            {
-                throw new Exception("请先选择 .proto 文件！");
-            }
-
             var dirs = Directory.GetDirectories(location);
             foreach (var dir in dirs)
             {
@@ -468,6 +491,7 @@ namespace zFramework.TinyRPC.Editors
                 File.WriteAllText(file, content, Encoding.UTF8);
             }
         }
+
         /// <summary>
         ///  根据给定的路径，判断 proto 文件的存储位置类型
         /// </summary>
@@ -484,6 +508,24 @@ namespace zFramework.TinyRPC.Editors
             };
             return type;
         }
+
+        public string GetProtoFileContianerInnerPath()
+        {
+            var location = ResolveCurrentInnerLocation();
+            var path = Path.Combine(location, TinyRpcEditorSettings.ProtoFileContainer);
+            return path;
+        }
+
+        public string ResolveCurrentInnerLocation()
+        {
+            var location = settings.currentLocationType switch
+            {
+                var type when type is not LocationType.Assets => $"Packages/{TinyRpcEditorSettings.AsmdefName[..^7]}",
+                _ => "Assets/TinyRPC/Generated",
+            };
+            return location;
+        }
+
         private string ResolvePhysicLocation(LocationType locationType, string subLocation)
         {
             //根据 type 获取新的文件夹
