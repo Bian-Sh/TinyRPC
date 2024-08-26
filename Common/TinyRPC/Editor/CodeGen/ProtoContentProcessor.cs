@@ -372,7 +372,15 @@ namespace zFramework.TinyRPC.Editors
         {
             var lines = block.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             //checkout message neme first for log 
-            msgName = lines.Where(line => line.Trim().StartsWith("message")).FirstOrDefault().Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)[1];
+            var line2arr= lines.Where(line => line.Trim().StartsWith("message")).FirstOrDefault()?.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (line2arr?.Length > 1) 
+            {
+                msgName = line2arr[1];
+            }
+            else
+            {
+                return null;
+            }
 
             for (int i = 0; i < lines.Length; i++)
             {

@@ -16,7 +16,7 @@ namespace zFramework.TinyRPC.Editors
 
     public static class TinyProtoHandler
     {
-        public static void Proto2CS(string protoName, string protoContent, string outputPath,TinyRpcEditorSettings settings)
+        public static void Proto2CS(string protoName, string protoContent, string outputPath, TinyRpcEditorSettings settings)
         {
             protoContent = protoContent.Replace("\r\n", "\n");
             // split into message blocks by }
@@ -36,15 +36,18 @@ namespace zFramework.TinyRPC.Editors
                     continue;
                 }
                 var scriptInfo = processor.ResolveBlockInfo(info);
-                string csPath = Path.Combine(root, $"{scriptInfo.type}/{scriptInfo.name}.cs");
-                var dir = Path.GetDirectoryName(csPath);
-                if (!Directory.Exists(dir))
+                if (scriptInfo != null)
                 {
-                    Directory.CreateDirectory(dir);
+                    string csPath = Path.Combine(root, $"{scriptInfo.type}/{scriptInfo.name}.cs");
+                    var dir = Path.GetDirectoryName(csPath);
+                    if (!Directory.Exists(dir))
+                    {
+                        Directory.CreateDirectory(dir);
+                    }
+                    using FileStream txt = new FileStream(csPath, FileMode.Create, FileAccess.ReadWrite);
+                    using StreamWriter sw = new StreamWriter(txt, Encoding.UTF8);
+                    sw.Write(scriptInfo.content);
                 }
-                using FileStream txt = new FileStream(csPath, FileMode.Create, FileAccess.ReadWrite);
-                using StreamWriter sw = new StreamWriter(txt, Encoding.UTF8);
-                sw.Write(scriptInfo.content);
             }
         }
 
