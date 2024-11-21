@@ -55,8 +55,17 @@ namespace zFramework.TinyRPC
                     if (source.IsCancellationRequested) return false;
                     Session = new Session(client, context, false);
                     context.Post(v => OnClientEstablished?.Invoke(), null);
-                    _ = Task.Run(ReceiveAsync);
-                    _ = Task.Run(PingAsync);
+                    // 由于安卓上发现程序一旦置于后台就会断线，此处改为 Thread  
+                    Thread thread = new(ReceiveAsync)
+                    {
+                        IsBackground = true
+                    };
+                    thread.Start();
+                    Thread ping = new(() => _ = PingAsync())
+                    {
+                        IsBackground = true
+                    };
+                    ping.Start();
                     return true;
                 }
                 catch (Exception e)
