@@ -1012,8 +1012,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 898acc4bda936874491d4af3b0f48759, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  port: 8889
-  discoveryPort: 8081
+  discoveryPort: 8080
   scope: TinyRPC.001
   button: {fileID: 1198086915}
   button2: {fileID: 1361130819}

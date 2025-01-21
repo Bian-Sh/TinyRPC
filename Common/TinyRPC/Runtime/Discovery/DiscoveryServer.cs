@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -32,7 +33,25 @@ namespace zFramework.TinyRPC
             this.scope = scope;
             this.data = data;
             this.port = port;
-            udpClient = new UdpClient(port);
+
+            try
+            {
+                udpClient = new UdpClient();
+                udpClient.EnableBroadcast = true; // 启用广播
+                udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, port)); // 绑定到所有网络接口
+
+                // 加入多播组（可选）
+                // IPAddress multicastAddress = IPAddress.Parse("239.0.0.222");
+                // udpClient.JoinMulticastGroup(multicastAddress);
+
+                Debug.Log($"UDP Client initialized on port {port} with scope '{scope}' and data '{data}'");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to initialize UDP Client on port {port}: {ex.Message}");
+                throw;
+            }
         }
         public void Start()
         {
@@ -57,10 +76,16 @@ namespace zFramework.TinyRPC
                             }
                         }
                     }
-                    catch (Exception e)
+                    // catch dispose signal of udpclient  ,then break
+                    // todo： 其他可能需要引发 while break 的异常
+                    catch (ObjectDisposedException ex) when (ex.ObjectName == typeof(UdpClient).FullName)
                     {
-                        Debug.LogWarning($"{nameof(DiscoveryServer)}: quit,  exception = {e}");
+                        Debug.Log($"{nameof(DiscoveryServer)}: udpClient has been disposed.");
                         break;
+                    }
+                    catch (Exception other)
+                    {
+                        Debug.LogWarning($"{nameof(DiscoveryServer)}: quit,  exception = {other}");
                     }
                 }
             });

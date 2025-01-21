@@ -955,7 +955,6 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
   m_AdditionalShaderChannelsFlag: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -1250,7 +1249,7 @@ MonoBehaviour:
   sendAttributeMarkedNormalMessage: {fileID: 961185163}
   sendAttributeMarkedRPCMessage: {fileID: 486884331}
   ping: {fileID: 863945259}
-  discoveryPort: 8081
+  discoveryPort: 12345
   scope: TinyRPC.001
 --- !u!114 &1051053646
 MonoBehaviour:
