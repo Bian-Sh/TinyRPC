@@ -57,6 +57,8 @@ namespace zFramework.TinyRPC
         /// <returns>本机的 IP 地址</returns>
         private IPAddress GetLocalIPAddress()
         {
+            ShowNetworkInterfaceInformation();
+            
             var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
                 .Where(nic => nic.OperationalStatus == OperationalStatus.Up && !nic.Description.Contains("Virtual") && nic.GetIPProperties().GatewayAddresses.Any())
                 .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
@@ -72,6 +74,50 @@ namespace zFramework.TinyRPC
             return networkInterfaces;
         }
 
+        private static void ShowNetworkInterfaceInformation()
+        {
+            var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+            var sb = new StringBuilder();
+
+            foreach (var adapter in networkInterfaces)
+            {
+                sb.AppendLine($"名称: {adapter.Name}");
+                sb.AppendLine($"描述: {adapter.Description}");
+                sb.AppendLine($"状态: {adapter.OperationalStatus}");
+                sb.AppendLine($"MAC 地址: {adapter.GetPhysicalAddress()}");
+                sb.AppendLine($"接口类型: {adapter.NetworkInterfaceType}");
+
+                var ipProperties = adapter.GetIPProperties();
+                var ipv4Address = ipProperties.UnicastAddresses
+                    .FirstOrDefault(ip => ip.Address.AddressFamily == AddressFamily.InterNetwork);
+                if (ipv4Address != null)
+                {
+                    sb.AppendLine($"IPv4 地址: {ipv4Address.Address}");
+                    sb.AppendLine($"子网掩码: {ipv4Address.IPv4Mask}");
+                }
+                else
+                {
+                    sb.AppendLine("IPv4 地址: 无");
+                    sb.AppendLine("子网掩码: 无");
+                }
+
+                var ipv4Gateway = ipProperties.GatewayAddresses
+                    .FirstOrDefault(g => g.Address.AddressFamily == AddressFamily.InterNetwork);
+                if (ipv4Gateway != null)
+                {
+                    sb.AppendLine($"默认网关: {ipv4Gateway.Address}");
+                }
+                else
+                {
+                    sb.AppendLine("默认网关: 无");
+                }
+
+                sb.AppendLine("------------------------------");
+            }
+
+            Debug.Log(sb.ToString());
+        }
+
         /// <summary>
         /// 开始网络发现
         /// </summary>
@@ -79,69 +125,74 @@ namespace zFramework.TinyRPC
         {
             Task.Run(async () =>
             {
-                var localIPAddress = GetLocalIPAddress();
-                var bytes = Encoding.UTF8.GetBytes(scope);
-                while (true)
+                try
                 {
-                    using var udpClient = new UdpClient(new IPEndPoint(localIPAddress, 0));
-                    activeClient = udpClient;
-                    udpClient.MulticastLoopback = true;
-                    //udpClient.AllowNatTraversal(true);
-                    try
+                    var localIPAddress = GetLocalIPAddress();
+                    var bytes = Encoding.UTF8.GetBytes(scope);
+                    while (true)
                     {
-                        Debug.Log($"{nameof(DiscoveryClient)} Is{(isWaiting ? "Waiting " : $"Scanning {port} ")}!");
-                        await WaitUntilAsync(() => isWaiting == false);
-                        cts.Token.ThrowIfCancellationRequested();
-
-                        // 设置超时机制
-                        using var timeoutCts = new CancellationTokenSource();
-                        timeoutCts.CancelAfter((int)(timeout * 1000));
-                        await udpClient.SendAsync(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, port));
-                        cts.Token.ThrowIfCancellationRequested();
-
-                        // 接收响应
-                        var result = await udpClient.ReceiveAsync(timeoutCts.Token);
-                        cts.Token.ThrowIfCancellationRequested();
-
-                        if (result.Buffer.Length != 0)
+                        using var udpClient = new UdpClient(new IPEndPoint(localIPAddress, 0));
+                        activeClient = udpClient;
+                        try
                         {
-                            var message = Encoding.UTF8.GetString(result.Buffer);
-                            // 校验消息是否来自指定的 DiscoveryServer ，请设定专属的 scope
-                            if (message.StartsWith(scope))
+                            Debug.Log($"{nameof(DiscoveryClient)} Is{(isWaiting ? "Waiting " : $"Scanning {port} ")}!");
+                            await WaitUntilAsync(() => isWaiting == false);
+                            cts.Token.ThrowIfCancellationRequested();
+
+                            // 设置超时机制
+                            using var timeoutCts = new CancellationTokenSource();
+                            timeoutCts.CancelAfter((int)(timeout * 1000));
+                            await udpClient.SendAsync(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, port));
+                            cts.Token.ThrowIfCancellationRequested();
+
+                            // 接收响应
+                            var result = await udpClient.ReceiveAsync(timeoutCts.Token);
+                            cts.Token.ThrowIfCancellationRequested();
+
+                            if (result.Buffer.Length != 0)
                             {
-                                var arr = message.Split('|');
-                                if (arr.Length == 2 && int.TryParse(arr[1], out int port))
+                                var message = Encoding.UTF8.GetString(result.Buffer);
+                                // 校验消息是否来自指定的 DiscoveryServer ，请设定专属的 scope
+                                if (message.StartsWith(scope))
                                 {
-                                    var host = result.RemoteEndPoint.Address.ToString();
-                                    var ip = host.Split(':')[0];
-                                    isWaiting = true; // 二话不说先卡住，保证事件只执行一次，是否解锁由调用方决定！
-                                    Debug.Log($"{nameof(DiscoveryClient)}:  Server Discovered， ip = {ip}, port = {port}");
-                                    context.Post(_ => OnServerDiscovered?.Invoke(ip, port), null);
+                                    var arr = message.Split('|');
+                                    if (arr.Length == 2 && int.TryParse(arr[1], out int port))
+                                    {
+                                        var host = result.RemoteEndPoint.Address.ToString();
+                                        var ip = host.Split(':')[0];
+                                        isWaiting = true; // 二话不说先卡住，保证事件只执行一次，是否解锁由调用方决定！
+                                        Debug.Log($"{nameof(DiscoveryClient)}:  Server Discovered， ip = {ip}, port = {port}");
+                                        context.Post(_ => OnServerDiscovered?.Invoke(ip, port), null);
+                                    }
                                 }
                             }
                         }
-                    }
-                    catch (TimeoutException)
-                    {
-                        if (!isWaiting)
+                        catch (TimeoutException)
                         {
-                            Debug.Log($"{nameof(DiscoveryClient)}: Discovery Timeout !");
-                            context.Post(_ => OnDiscoveryTimeout?.Invoke(), null);
+                            if (!isWaiting)
+                            {
+                                Debug.Log($"{nameof(DiscoveryClient)}: Discovery Timeout !");
+                                context.Post(_ => OnDiscoveryTimeout?.Invoke(), null);
+                            }
+                        }
+                        catch (Exception e) when
+                        (e is OperationCanceledException ||
+                        e is NullReferenceException ||
+                        (e is ObjectDisposedException ex && ex.ObjectName == typeof(UdpClient).FullName))
+                        {
+                            Debug.Log($"{nameof(DiscoveryClient)}: Discovery Canceled !");
+                            break;
+                        }
+                        catch (Exception other)
+                        {
+                            Debug.LogWarning($"{nameof(DiscoveryClient)}: quit,  exception = {other}");
+                            // 如果是 Dispose Exception  break
                         }
                     }
-                    catch (Exception e) when
-                    (e is OperationCanceledException ||
-                    e is NullReferenceException ||
-                    (e is ObjectDisposedException ex && ex.ObjectName == typeof(UdpClient).FullName))
-                    {
-                        Debug.Log($"{nameof(DiscoveryClient)}: Discovery Canceled !");
-                        break;
-                    }
-                    catch (Exception other)
-                    {
-                        Debug.LogWarning($"{nameof(DiscoveryClient)}: quit,  exception = {other}");
-                        // 如果是 Dispose Exception  break
-                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
                 }
             });
         }
