@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ namespace zFramework.TinyRPC
         private readonly UdpClient udpClient;
         private bool isRunning = true;
         private int port;
+        private readonly string deviceId;
 
         /// <summary>
         /// 构造函数。创建一个DiscoveryServer实例。
@@ -32,13 +34,17 @@ namespace zFramework.TinyRPC
             this.scope = scope;
             this.data = data;
             this.port = port;
-            udpClient = new UdpClient(port);
+            this.deviceId = SystemInfo.deviceUniqueIdentifier;
+            // 修复多网卡问题：明确绑定到 IPAddress.Any 以监听所有网络接口
+            udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, port));
+            // 启用广播
+            udpClient.EnableBroadcast = true;
         }
         public void Start()
         {
             Task.Run(async () =>
             {
-                Debug.Log($"{nameof(DiscoveryServer)} is Listening {port} !");
+                Debug.Log($"{nameof(DiscoveryServer)} is Listening {port} on all network interfaces! Device ID: {deviceId}");
                 while (isRunning)
                 {
                     try
@@ -47,13 +53,14 @@ namespace zFramework.TinyRPC
                         if (result.Buffer.Length != 0)
                         {
                             var message = Encoding.UTF8.GetString(result.Buffer);
-                            // 校验消息是否来自指定的 DiscoveryServer ， 请设定专属的 scope
+                            // 校验消息是否来自指定的 DiscoveryClient ， 请设定专属的 scope
                             if (message.Equals(scope))
                             {
-                                var report = $"{scope}|{data}";
+                                // 格式：scope|port|deviceId
+                                var report = $"{scope}|{data}|{deviceId}";
                                 var bytes = Encoding.UTF8.GetBytes(report);
                                 await udpClient.SendAsync(bytes, bytes.Length, result.RemoteEndPoint);
-                                Debug.Log($"{nameof(DiscoveryServer)} Reply To {result.RemoteEndPoint}");
+                                Debug.Log($"{nameof(DiscoveryServer)} Reply To {result.RemoteEndPoint} with Device ID: {deviceId}");
                             }
                         }
                     }
