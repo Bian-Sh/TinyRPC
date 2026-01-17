@@ -32,7 +32,16 @@ namespace zFramework.TinyRPC.Editors
                 if (forceReload || !s_Instance)
                 {
                     var arr = InternalEditorUtility.LoadSerializedFileAndForget(filePath);
-                    s_Instance = arr.Length > 0 ? arr[0] as T : s_Instance ?? CreateInstance<T>();
+                    var instance = arr.Length > 0 ? arr[0] as T : CreateInstance<T>();
+                    if (s_Instance)  //如果实例存在，只需要Override 即可
+                    {
+                        var json = JsonUtility.ToJson(instance);
+                        JsonUtility.FromJsonOverwrite(json, s_Instance);
+                    }
+                    else
+                    {
+                        s_Instance = instance;
+                    }
                 }
             }
             else
