@@ -97,12 +97,12 @@ namespace zFramework.TinyRPC.Samples
             //3. 取消登录中...的显示
             tcs.Cancel();
             // 将登录结果反馈给 discoveryClient , result[1] 是 ConnectAsync 的返回值
-            discoveryClient.isWaiting = result[1];
             if (result[1])
             {
                 //4. 转换 connect 字样为 disconnect
                 connect.GetComponentInChildren<Text>().text = "Connected";
                 Debug.Log($"{nameof(TestClientWithDiscovery)}: Client Started");
+                discoveryClient.Standby();
             }
             else
             {
@@ -197,7 +197,7 @@ namespace zFramework.TinyRPC.Samples
             connect.GetComponentInChildren<Text>().text = "Disconnected";
             ping.text = "已断线";
             // 重新开始发现服务器
-            discoveryClient.isWaiting = false;
+            discoveryClient.Rescan();
         }
 
         private void OnClientEstablished()
